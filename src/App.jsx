@@ -187,7 +187,7 @@ export default function App() {
   }
   const setMode = (m) => {
     setStore((s) => ({ ...s, mode: m }))
-    if (m === 'light' && ['mock', 'plan', 'how'].includes(tab)) setTab('fr')
+    if (m === 'light' && ['mock', 'plan', 'how', 'res'].includes(tab)) setTab('fr')
   }
   const setWhy = (t) => setStore((s) => ({ ...s, why: t }))
   const setChNote = (k, t) => updateChapter(k, { note: t })
@@ -520,6 +520,9 @@ export default function App() {
               <div className={`tab${tab === 'how' ? ' active' : ''}`} data-p="how" onClick={() => setTab('how')}>
                 <div className="code">Mindset</div><div className="nm">How to Pass</div><div className="pc">★</div>
               </div>
+              <div className={`tab${tab === 'res' ? ' active' : ''}`} data-p="res" onClick={() => setTab('res')}>
+                <div className="code">Learn</div><div className="nm">Resources</div><div className="pc">▶</div>
+              </div>
             </>
           )}
         </div>
@@ -549,6 +552,11 @@ export default function App() {
         {/* HOW */}
         <div className={`view${tab === 'how' ? ' active' : ''}`}>
           {tab === 'how' && <HowView />}
+        </div>
+
+        {/* RESOURCES */}
+        <div className={`view${tab === 'res' ? ' active' : ''}`}>
+          {tab === 'res' && <ResourcesView />}
         </div>
 
         {/* TOOLBAR */}
@@ -906,6 +914,99 @@ function HowView() {
         </div>
       ))}
       <div className="callout" style={{ marginTop: 20, fontSize: 16 }}><b>Swathi, We GOT THIS.</b> 🎯<br /><span style={{ color: 'var(--dim)', fontSize: 13 }}>One chapter at a time. Tick it, log it, rate it. Watch the bar fill.</span></div>
+    </>
+  )
+}
+
+/* ============================================================
+   RESOURCES VIEW — curated best lectures + official ICAI links
+   Video links use YouTube search so they always surface the
+   current top-rated results (no dead/expiring single-video URLs).
+   ICAI links are official Board of Studies pages (verified).
+   ============================================================ */
+const yt = (q) => `https://www.youtube.com/results?search_query=${encodeURIComponent(q)}`
+
+const RES_OFFICIAL = [
+  { t: 'ICAI Study Material — Knowledge Portal', u: 'https://www.icai.org/post/bos-knowledge-portal', d: 'Official modules for all three papers' },
+  { t: 'Revision Test Papers (RTP)', u: 'https://boslive.icai.org/education_content_rtp.php', d: 'Latest RTPs — do these before the exam' },
+  { t: 'Mock Test Papers (MTP)', u: 'https://boslive.icai.org/education_content_modelTestPapers.php', d: 'ICAI mock papers with solutions' },
+  { t: 'Past Papers + Suggested Answers', u: 'https://boslive.icai.org/education_content.php?p=Question+Papers', d: 'Previous attempts & examiner answers' },
+  { t: 'ICAI BoS — Live & Recorded Classes', u: 'https://boslive.icai.org/', d: 'Free official lectures & LVC schedule' },
+  { t: 'ICAI BoS on YouTube', u: 'https://www.youtube.com/c/THEICAIBOS', d: 'Official BoS video channel' },
+]
+
+const RES_PAPERS = {
+  fr: {
+    name: 'Financial Reporting', tier: 'fr',
+    items: [
+      { t: 'CA Parveen Sharma — FR full lectures', d: 'Concept-first, Ind AS depth', u: yt('CA Final FR Financial Reporting Parveen Sharma new scheme') },
+      { t: 'CA Aakash Kandoi — FR lectures & revision', d: 'Popular for problem practice', u: yt('CA Final FR Aakash Kandoi revision new scheme') },
+      { t: 'FR fast-track revision (Nov 2026)', d: 'Rapid pre-exam pass', u: yt('CA Final FR fast track revision Nov 2026 new scheme') },
+      { t: 'Ind AS conceptual playlists', d: 'Standard-by-standard', u: yt('CA Final FR Ind AS revision lectures new scheme') },
+    ],
+  },
+  afm: {
+    name: 'Advanced Financial Management', tier: 'afm',
+    items: [
+      { t: 'CA Aaditya Jain — AFM full lectures', d: 'Widely rated for AFM/SFM', u: yt('CA Final AFM Advanced Financial Management Aaditya Jain new scheme') },
+      { t: 'CA Sanjay Saraf — AFM lectures', d: 'Strong on theory + derivatives', u: yt('CA Final AFM Sanjay Saraf') },
+      { t: 'AFM fast-track revision (Nov 2026)', d: 'Formula + problem sprint', u: yt('CA Final AFM fast track revision Nov 2026') },
+      { t: 'Derivatives & Portfolio problem drills', d: 'High-weight problem areas', u: yt('CA Final AFM derivatives portfolio management problems revision') },
+    ],
+  },
+  aud: {
+    name: 'Advanced Auditing', tier: 'aud',
+    items: [
+      { t: 'CA Sanidhya Saraf — Audit lectures', d: 'Popular Advanced Auditing faculty', u: yt('CA Final Advanced Auditing Sanidhya Saraf new scheme') },
+      { t: 'CA Surbhi Bansal — Audit lectures', d: 'Trusted audit notes & classes', u: yt('CA Final Advanced Auditing Surbhi Bansal') },
+      { t: 'Audit fast-track revision (Nov 2026)', d: 'Presentation-focused pass', u: yt('CA Final Advanced Auditing fast track revision Nov 2026') },
+      { t: 'Standards on Auditing (SA) quick revision', d: 'SA-wise rapid recall', u: yt('CA Final Advanced Auditing Standards on Auditing SA revision') },
+    ],
+  },
+}
+
+function ResourcesView() {
+  return (
+    <>
+      <div className="paper-head"><h2>Resources</h2></div>
+      <div className="mock-intro">
+        Curated best-rated lectures and the official ICAI material, per paper. Video links open a
+        live YouTube search, so you always land on the current top-rated results — pick the newest
+        <b> New Scheme / Nov 2026</b> uploads.
+      </div>
+
+      <div className="res-official">
+        <h4>Official ICAI — do not skip</h4>
+        <div className="res-grid">
+          {RES_OFFICIAL.map((r, i) => (
+            <a className="res-card official" key={i} href={r.u} target="_blank" rel="noopener noreferrer">
+              <div className="res-t">{r.t}</div>
+              <div className="res-d">{r.d}</div>
+              <span className="res-go">Open ↗</span>
+            </a>
+          ))}
+        </div>
+      </div>
+
+      {['fr', 'afm', 'aud'].map((pk) => {
+        const P = RES_PAPERS[pk]
+        return (
+          <div className="res-paper" key={pk}>
+            <div className="res-paper-head"><span className={`wt ${P.tier}`}>{pk.toUpperCase()}</span><h4>{P.name}</h4></div>
+            <div className="res-grid">
+              {P.items.map((r, i) => (
+                <a className="res-card" key={i} href={r.u} target="_blank" rel="noopener noreferrer">
+                  <div className="res-t">▶ {r.t}</div>
+                  <div className="res-d">{r.d}</div>
+                  <span className="res-go">Watch ↗</span>
+                </a>
+              ))}
+            </div>
+          </div>
+        )
+      })}
+
+      <div className="savenote">Links open in a new tab. Faculty picks are popular community-rated names — try a lecture before committing a full course.</div>
     </>
   )
 }
