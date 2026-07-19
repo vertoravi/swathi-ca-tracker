@@ -300,3 +300,41 @@
   .dl-copy{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 13px;
     font-size:12px;font-weight:600;color:var(--ink);cursor:pointer;font-family:inherit;transition:.15s}
   .dl-copy:hover{background:var(--panel-2)}
+
+  /* ============================================================
+     DASHBOARD ENHANCEMENT — per-paper progress bars
+     ============================================================ */
+  .paper-bars{margin:14px 0 4px;display:flex;flex-direction:column;gap:9px}
+  .pb-row{display:grid;grid-template-columns:52px 1fr auto;align-items:center;gap:10px}
+  .pb-name{font-size:12px;font-weight:700;color:var(--dim);letter-spacing:.02em}
+  .pb-track{height:8px;background:var(--panel-2);border:1px solid var(--line);border-radius:6px;overflow:hidden}
+  .pb-fill{height:100%;border-radius:6px;transition:width .3s ease}
+  .pb-fill[data-p="fr"]{background:var(--fr)}
+  .pb-fill[data-p="afm"]{background:var(--afm)}
+  .pb-fill[data-p="aud"]{background:var(--aud)}
+  .pb-val{font-size:11.5px;color:var(--dim);white-space:nowrap}
+  .pb-val b{color:var(--ink)}
+
+  /* ============================================================
+     NOTES — chapter notes + section notes
+     ============================================================ */
+  .note-btn{background:none;border:1px solid var(--line);border-radius:7px;cursor:pointer;
+    font-size:13px;line-height:1;padding:5px 7px;opacity:.5;transition:.15s;font-family:inherit}
+  .note-btn:hover{opacity:1;background:var(--panel-2)}
+  .note-btn.has{opacity:1;border-color:var(--gold);background:rgba(184,134,11,.1)}
+  .note-btn.open{opacity:1;border-color:var(--gold)}
+  .note-flag{font-size:10.5px;color:var(--gold);font-weight:600;margin-left:2px}
+
+  .ch-note{margin:2px 0 10px 40px;animation:noteIn .12s ease}
+  .ch-note textarea{width:100%;background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--gold);
+    border-radius:0 9px 9px 0;color:var(--ink);padding:10px 12px;font-size:13.5px;font-family:inherit;
+    line-height:1.5;resize:vertical;min-height:56px}
+  .ch-note textarea:focus{outline:none;border-color:var(--gold)}
+  @keyframes noteIn{from{opacity:0;transform:translateY(-2px)}to{opacity:1;transform:none}}
+
+  .sec-note{margin:0 0 12px}
+  .sec-note label{display:block;font-size:9.5px;text-transform:uppercase;letter-spacing:.14em;
+    color:var(--gold);font-weight:700;margin-bottom:5px}
+  .sec-note textarea{width:100%;background:var(--panel);border:1px dashed var(--line);border-radius:9px;
+    color:var(--ink);padding:9px 11px;font-size:13px;font-family:inherit;line-height:1.5;resize:vertical;min-height:44px}
+  .sec-note textarea:focus{outline:none;border-color:var(--gold);border-style:solid}

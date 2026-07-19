@@ -26,6 +26,7 @@ function normalize(d) {
   return {
     ch: (d && d.ch) || {},
     mocks: (d && d.mocks) || [],
+    secNotes: (d && d.secNotes) || {}, // { `${paper}-${si}`: text }
     why: (d && d.why) || '',
     mode: (d && d.mode) || 'full',
   }
@@ -174,6 +175,9 @@ export default function App() {
     if (m === 'light' && ['mock', 'plan', 'how'].includes(tab)) setTab('fr')
   }
   const setWhy = (t) => setStore((s) => ({ ...s, why: t }))
+  const setChNote = (k, t) => updateChapter(k, { note: t })
+  const setSecNote = (pk, si, t) =>
+    setStore((s) => ({ ...s, secNotes: { ...(s.secNotes || {}), [`${pk}-${si}`]: t } }))
 
   /* ---------- derived stats ---------- */
   const stats = useMemo(() => {
@@ -449,6 +453,19 @@ export default function App() {
             <span><b>{stats.done}</b> of {stats.total} chapters</span>
             <span>{stats.total ? Math.round((stats.done / stats.total) * 100) : 0}%</span>
           </div>
+          <div className="paper-bars">
+            {['fr', 'afm', 'aud'].map((pk) => {
+              const p = stats.per[pk]; const pct = p.pt ? Math.round((p.pd / p.pt) * 100) : 0
+              const nm = pk === 'fr' ? 'FR' : pk === 'afm' ? 'AFM' : 'Audit'
+              return (
+                <div className="pb-row" key={pk}>
+                  <span className="pb-name">{nm}</span>
+                  <div className="pb-track"><div className="pb-fill" data-p={pk} style={{ width: pct + '%' }} /></div>
+                  <span className="pb-val"><b>{pct}%</b> · {p.pd}/{p.pt}</span>
+                </div>
+              )
+            })}
+          </div>
           <div className="mini-stats">
             <div className="ms"><div className="n">{Math.round(stats.hrs * 10) / 10}</div><div className="l">Hours logged</div></div>
             <div className="ms"><div className="n">{stats.shaky}</div><div className="l">Shaky (red)</div></div>
@@ -488,7 +505,8 @@ export default function App() {
             {tab === pk && (
               <PaperView pk={pk} g={g} isLight={isLight}
                 openSet={openSecs[pk] || new Set()} onToggleSec={(si) => toggleSec(pk, si)}
-                onDone={toggleDone} onHours={setHours} onConf={setConf} />
+                onDone={toggleDone} onHours={setHours} onConf={setConf}
+                secNotes={store.secNotes || {}} onChNote={setChNote} onSecNote={setSecNote} />
             )}
           </div>
         ))}
@@ -625,9 +643,13 @@ function WhyAnchor({ why, onSave }) {
 /* ============================================================
    PAPER VIEW (heatmap + sections + chapters + tips)
    ============================================================ */
-function PaperView({ pk, g, isLight, openSet, onToggleSec, onDone, onHours, onConf }) {
+function PaperView({ pk, g, isLight, openSet, onToggleSec, onDone, onHours, onConf, secNotes, onChNote, onSecNote }) {
   const P = PAPERS[pk]
   const totalCh = P.sections.reduce((a, s) => a + s.ch.length, 0)
+  const [openNotes, setOpenNotes] = useState(() => new Set())
+  const toggleNote = (k) => setOpenNotes((o) => {
+    const n = new Set(o); n.has(k) ? n.delete(k) : n.add(k); return n
+  })
   return (
     <>
       <div className="paper-head"><span className="paper-dot" style={{ background: P.dot }} /><h2>{P.name}</h2></div>
@@ -668,6 +690,13 @@ function PaperView({ pk, g, isLight, openSet, onToggleSec, onDone, onHours, onCo
             </div>
             <div className="sec-body">
               {!isLight && <div className="prio-note">{s.note}</div>}
+              <div className="sec-note">
+                <label>Section notes</label>
+                <textarea
+                  value={secNotes[`${pk}-${si}`] || ''}
+                  placeholder="Strategy, formulae, examiner focus, weak spots for this section…"
+                  onChange={(e) => onSecNote(pk, si, e.target.value)} />
+              </div>
               {s.ch.map((name, ci) => {
                 const k = ck(pk, si, ci); const st = g(k); const rev = reviseDue(st)
                 let revChip = null
@@ -675,13 +704,15 @@ function PaperView({ pk, g, isLight, openSet, onToggleSec, onDone, onHours, onCo
                 else if (rev === 'overdue') revChip = <span className="rev-chip due">↻ revise (overdue)</span>
                 else if (st.done && st.conf === 3) revChip = <span className="rev-chip">✓ solid</span>
                 return (
-                  <div className={`ch${st.done ? ' done' : ''}${rev ? ' reviseflag' : ''}`} key={ci}>
+                  <React.Fragment key={ci}>
+                  <div className={`ch${st.done ? ' done' : ''}${rev ? ' reviseflag' : ''}`}>
                     <div className={`cbx${st.done ? ' on' : ''}`} onClick={() => onDone(k)}>{st.done ? '✓' : ''}</div>
                     <div>
                       <div className="ch-name">{name}</div>
                       <div className="ch-meta">
                         <span>{st.hrs > 0 ? st.hrs + ' h' : '·'}{st.conf ? ' · conf ' + st.conf + '/3' : ''}</span>
                         {revChip}
+                        {st.note ? <span className="note-flag">📝 note</span> : null}
                       </div>
                     </div>
                     <div className="ch-ctrl">
@@ -697,8 +728,18 @@ function PaperView({ pk, g, isLight, openSet, onToggleSec, onDone, onHours, onCo
                           <b key={v} data-v={v} className={st.conf === v ? 's' : ''} onClick={() => onConf(k, v)}>{v}</b>
                         ))}
                       </div>
+                      <button className={`note-btn${st.note ? ' has' : ''}${openNotes.has(k) ? ' open' : ''}`}
+                        title="Add a note" onClick={() => toggleNote(k)}>📝</button>
                     </div>
                   </div>
+                  {openNotes.has(k) && (
+                    <div className="ch-note">
+                      <textarea value={st.note || ''} autoFocus
+                        placeholder="Your note for this chapter — doubts, formulae, page refs, where you stopped…"
+                        onChange={(e) => onChNote(k, e.target.value)} />
+                    </div>
+                  )}
+                  </React.Fragment>
                 )
               })}
             </div>
