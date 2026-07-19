@@ -31,6 +31,7 @@ function normalize(d) {
     goalMins: (d && typeof d.goalMins === 'number') ? d.goalMins : 240, // daily target (default 4h)
     reminderOn: (d && d.reminderOn) || false,
     reminderTime: (d && d.reminderTime) || '20:00',
+    focus: (d && typeof d.focus === 'string') ? d.focus : 'aud', // current priority paper ('' = none)
     why: (d && d.why) || '',
     mode: (d && d.mode) || 'full',
   }
@@ -219,6 +220,8 @@ export default function App() {
   }
   const setGoal = (mins) => setStore((s) => ({ ...s, goalMins: Math.max(30, mins) }))
   const updateReminder = (patch) => setStore((s) => ({ ...s, ...patch }))
+  const focus = store.focus || ''
+  const setFocus = (p) => setStore((s) => ({ ...s, focus: s.focus === p ? '' : p }))
   const setHours = (k, v) => updateChapter(k, { hrs: parseFloat(v) || 0, hrsAt: Date.now() })
   const setConf = (k, v) => {
     const cur = g(k)
@@ -271,13 +274,15 @@ export default function App() {
           if (rev === 'due') { score += 5; reasons.push('revision due') }
           if (rev === 'overdue') { score += 3; reasons.push('revision overdue') }
           if (s.p === 'hi' && !st.done) score += 2
-          if (score > 0) items.push({ pk, si, ci, name, tier: s.p, conf: st.conf, rev, score, reasons })
+          const isFocus = focus && pk === focus
+          if (isFocus && score > 0) { score += 7; reasons.push('current focus') }
+          if (score > 0) items.push({ pk, si, ci, name, tier: s.p, conf: st.conf, rev, score, reasons, isFocus })
         })
       )
     )
     items.sort((a, b) => b.score - a.score)
     return items.slice(0, 4)
-  }, [ch, g])
+  }, [ch, g, focus])
 
   /* ---------- pace ---------- */
   const pace = useMemo(() => {
@@ -481,8 +486,9 @@ export default function App() {
             { id: 'papers', label: 'Past Papers' },
             { id: 'info', label: 'Information' },
           ].filter((n) => !isLight || ['home', 'fr', 'afm', 'aud'].includes(n.id)).map((n) => (
-            <button key={n.id} data-p={n.id} className={`navitem${tab === n.id ? ' active' : ''}`}
+            <button key={n.id} data-p={n.id} className={`navitem${tab === n.id ? ' active' : ''}${focus === n.id ? ' focus' : ''}`}
               onClick={() => { setTab(n.id); window.scrollTo({ top: 0, behavior: 'smooth' }) }}>
+              {focus === n.id && <span className="navitem-focus" title="Current focus">🎯</span>}
               <span className="navitem-l">{n.label}</span>
               {n.pc != null && <span className="navitem-pc">{n.pc}%</span>}
             </button>
@@ -492,6 +498,22 @@ export default function App() {
         {/* ===== DASHBOARD ===== */}
         {tab === 'home' && (
           <div className="view active">
+            <div className="focusbar">
+              <span className="focusbar-l">🎯 Current focus</span>
+              <div className="focusbar-btns">
+                {['fr', 'afm', 'aud'].map((pk) => (
+                  <button key={pk} data-p={pk} className={focus === pk ? 'on' : ''} onClick={() => setFocus(pk)}>
+                    {pk === 'fr' ? 'FR' : pk === 'afm' ? 'AFM' : 'Audit'}
+                  </button>
+                ))}
+              </div>
+              <span className="focusbar-hint">
+                {focus
+                  ? <>Prioritised in “Study this next” · <a onClick={() => { setTab(focus); window.scrollTo({ top: 0, behavior: 'smooth' }) }}>open {focus === 'fr' ? 'FR' : focus === 'afm' ? 'AFM' : 'Audit'} →</a></>
+                  : 'Pick a paper to prioritise it everywhere.'}
+              </span>
+            </div>
+
             <WhyAnchor why={store.why} onSave={setWhy} />
 
             <div className={encourage.cls}>
@@ -506,7 +528,7 @@ export default function App() {
 
             <div className="nextup">
               <h3>🎯 Study this next</h3>
-              <div className="lead">Ranked by weightage × weakness × time left. Do these first, highest marks per hour.</div>
+              <div className="lead">Ranked by weightage × weakness × time left{focus ? <> · <b>{focus === 'fr' ? 'FR' : focus === 'afm' ? 'AFM' : 'Audit'} prioritised</b></> : ''}. Do these first, highest marks per hour.</div>
               <div className="nu-list">
                 {nextUp.length === 0 ? (
                   <div className="nu-empty">🎉 Nothing flagged, every chapter is done and solid. Now live in the Mock Scores tab.</div>
@@ -520,6 +542,7 @@ export default function App() {
                         <div className="nu-why">{paperNm} · {it.reasons.join(' · ')}</div>
                       </div>
                       <div className="nu-badges">
+                        {it.isFocus && <span className="nu-tag focus">Focus</span>}
                         <span className={`nu-tag ${it.tier}`}>{it.tier === 'hi' ? 'High wt' : it.tier === 'med' ? 'Med wt' : 'Low wt'}</span>
                         {it.conf === 1 && <span className="nu-tag red">Shaky</span>}
                         {it.rev && <span className="nu-tag revise">Revise</span>}

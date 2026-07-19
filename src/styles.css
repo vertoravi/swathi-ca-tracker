@@ -580,3 +580,22 @@
   /* slightly calmer header now that nav carries wayfinding */
   header{padding:34px 0 18px}
   @media (max-width:560px){ header{padding:26px 0 14px} }
+
+  /* ============================================================
+     CURRENT FOCUS
+     ============================================================ */
+  .focusbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:6px 0 0;
+    background:linear-gradient(135deg,rgba(46,145,96,.10),rgba(184,134,11,.06));
+    border:1px solid var(--line);border-radius:12px;padding:12px 15px}
+  .focusbar-l{font-size:12px;font-weight:800;letter-spacing:.02em;color:var(--ink);white-space:nowrap}
+  .focusbar-btns{display:inline-flex;gap:6px}
+  .focusbar-btns button{border:1px solid var(--line);background:var(--panel);color:var(--dim);
+    border-radius:16px;padding:5px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit}
+  .focusbar-btns button[data-p="fr"].on{background:var(--fr);border-color:var(--fr);color:#fff}
+  .focusbar-btns button[data-p="afm"].on{background:var(--afm);border-color:var(--afm);color:#fff}
+  .focusbar-btns button[data-p="aud"].on{background:var(--aud);border-color:var(--aud);color:#fff}
+  .focusbar-hint{font-size:11.5px;color:var(--dim)}
+  .focusbar-hint a{cursor:pointer;font-weight:600}
+  .nu-tag.focus{background:rgba(46,145,96,.16);color:var(--go)}
+  .navitem-focus{font-size:12px;line-height:1}
+  .navitem.focus:not(.active){border-color:var(--aud)}
