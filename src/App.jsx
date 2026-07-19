@@ -178,7 +178,7 @@ export default function App() {
   const g = useCallback((k) => ch[k] || { done: false, hrs: 0, conf: 0, doneAt: null }, [ch])
 
   // active paper tab
-  const [tab, setTab] = useState('fr')
+  const [tab, setTab] = useState('home')
   const [openSecs, setOpenSecs] = useState({}) // {paper: Set(si)}
   const [tick, setTick] = useState(0) // force countdown recompute if needed
   const [showStats, setShowStats] = useState(false) // collapse extra stat tiles
@@ -226,7 +226,7 @@ export default function App() {
   }
   const setMode = (m) => {
     setStore((s) => ({ ...s, mode: m }))
-    if (m === 'light' && ['mock', 'plan', 'how', 'res', 'papers'].includes(tab)) setTab('fr')
+    if (m === 'light' && ['mock', 'papers', 'info'].includes(tab)) setTab('home')
   }
   const setWhy = (t) => setStore((s) => ({ ...s, why: t }))
   const setChNote = (k, t) => updateChapter(k, { note: t })
@@ -470,154 +470,134 @@ export default function App() {
           </div>
         </header>
 
-        {/* WHY ANCHOR */}
-        <WhyAnchor why={store.why} onSave={setWhy} />
-
-        {/* ENCOURAGEMENT */}
-        <div className={encourage.cls}>
-          <span className="em">{encourage.em}</span><span>{encourage.text}</span>
-        </div>
-
-        {/* DAILY ENGINE — streak · timer · goal */}
-        <DailyEngine daily={store.daily || {}} goalMins={store.goalMins || 240}
-          nextUp={nextUp} onAddMinutes={addMinutes} onSetGoal={setGoal} />
-
-        {/* DAILY REMINDER */}
-        <Reminders on={!!store.reminderOn} time={store.reminderTime || '20:00'}
-          daily={store.daily || {}} goalMins={store.goalMins || 240} onChange={updateReminder} />
-
-        {/* STUDY NOW */}
-        <div className="nextup">
-          <h3>🎯 Study this next</h3>
-          <div className="lead">Ranked by weightage × weakness × time left. Do these first, highest marks per hour.</div>
-          <div className="nu-list">
-            {nextUp.length === 0 ? (
-              <div className="nu-empty">🎉 Nothing flagged, every chapter is done and solid. Now live in the Mock Scores tab.</div>
-            ) : nextUp.map((it, i) => {
-              const paperNm = PAPERS[it.pk].name.split(',')[0].split(' ').slice(0, 2).join(' ')
-              return (
-                <div className="nu-item" key={`${it.pk}-${it.si}-${it.ci}`} onClick={() => jumpTo(it.pk, it.si)}>
-                  <div className="nu-rank">{i + 1}</div>
-                  <div>
-                    <div className="nu-name">{it.name}</div>
-                    <div className="nu-why">{paperNm} · {it.reasons.join(' · ')}</div>
-                  </div>
-                  <div className="nu-badges">
-                    <span className={`nu-tag ${it.tier}`}>{it.tier === 'hi' ? 'High wt' : it.tier === 'med' ? 'Med wt' : 'Low wt'}</span>
-                    {it.conf === 1 && <span className="nu-tag red">Shaky</span>}
-                    {it.rev && <span className="nu-tag revise">Revise</span>}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-          <div className="pace">
-            <div className="pace-txt">To finish all {stats.total} chapters by <b>Nov 2</b>, cover <b>{pace.perWeek.toFixed(1)}/week</b> (~<b>{pace.perDay.toFixed(1)}/day</b>). {pace.remaining} left · {pace.d} days.</div>
-            <div className={`pace-state ${pace.cls}`}>{pace.label}</div>
-          </div>
-        </div>
-
-        {/* OVERALL */}
-        <div className="overall">
-          <h3>Overall Group 1 Progress</h3>
-          <div className="pbar"><div style={{ width: (stats.total ? (stats.done / stats.total) * 100 : 0) + '%' }} /></div>
-          <div className="pbar-l">
-            <span><b>{stats.done}</b> of {stats.total} chapters</span>
-            <span>{stats.total ? Math.round((stats.done / stats.total) * 100) : 0}%</span>
-          </div>
-          <div className="paper-bars">
-            {['fr', 'afm', 'aud'].map((pk) => {
-              const p = stats.per[pk]; const pct = p.pt ? Math.round((p.pd / p.pt) * 100) : 0
-              const nm = pk === 'fr' ? 'FR' : pk === 'afm' ? 'AFM' : 'Audit'
-              return (
-                <div className="pb-row" key={pk}>
-                  <span className="pb-name">{nm}</span>
-                  <div className="pb-track"><div className="pb-fill" data-p={pk} style={{ width: pct + '%' }} /></div>
-                  <span className="pb-val"><b>{pct}%</b> · {p.pd}/{p.pt}</span>
-                </div>
-              )
-            })}
-          </div>
-          <button className={`collapse-btn${showStats ? ' open' : ''}`} onClick={() => setShowStats((v) => !v)}>
-            <span className="car">▸</span> {showStats ? 'Hide' : 'More'} stats
-          </button>
-          {showStats && (
-            <div className="mini-stats collapsible">
-              <div className="ms"><div className="n">{Math.round(stats.hrs * 10) / 10}</div><div className="l">Hours logged</div></div>
-              <div className="ms"><div className="n">{stats.shaky}</div><div className="l">Shaky (red)</div></div>
-              <div className="ms"><div className="n">{stats.solid}</div><div className="l">Solid (green)</div></div>
-              <div className="ms"><div className="n">{stats.hiLeft}</div><div className="l">High-wt left</div></div>
-              <div className="ms"><div className="n">{stats.revDue}</div><div className="l">Due to revise</div></div>
-            </div>
-          )}
-        </div>
-
-        {/* TABS */}
-        <div className="tabs">
-          {['fr', 'afm', 'aud'].map((pk) => (
-            <div key={pk} className={`tab${tab === pk ? ' active' : ''}`} data-p={pk} onClick={() => setTab(pk)}>
-              <div className="code">Paper {pk === 'fr' ? 1 : pk === 'afm' ? 2 : 3}</div>
-              <div className="nm">{pk === 'fr' ? 'Financial Reporting' : pk === 'afm' ? 'Adv. Fin. Mgmt' : 'Adv. Auditing'}</div>
-              <div className="pc">{stats.per[pk].pt ? Math.round((stats.per[pk].pd / stats.per[pk].pt) * 100) : 0}%</div>
-            </div>
+        {/* PRIMARY NAV (sticky, side-scroll) */}
+        <nav className="navbar">
+          {[
+            { id: 'home', label: 'Dashboard' },
+            { id: 'fr', label: 'Financial Reporting', pc: stats.per.fr.pt ? Math.round((stats.per.fr.pd / stats.per.fr.pt) * 100) : 0 },
+            { id: 'afm', label: 'Adv. Fin. Mgmt', pc: stats.per.afm.pt ? Math.round((stats.per.afm.pd / stats.per.afm.pt) * 100) : 0 },
+            { id: 'aud', label: 'Adv. Auditing', pc: stats.per.aud.pt ? Math.round((stats.per.aud.pd / stats.per.aud.pt) * 100) : 0 },
+            { id: 'mock', label: 'Mock Scores' },
+            { id: 'papers', label: 'Past Papers' },
+            { id: 'info', label: 'Information' },
+          ].filter((n) => !isLight || ['home', 'fr', 'afm', 'aud'].includes(n.id)).map((n) => (
+            <button key={n.id} data-p={n.id} className={`navitem${tab === n.id ? ' active' : ''}`}
+              onClick={() => { setTab(n.id); window.scrollTo({ top: 0, behavior: 'smooth' }) }}>
+              <span className="navitem-l">{n.label}</span>
+              {n.pc != null && <span className="navitem-pc">{n.pc}%</span>}
+            </button>
           ))}
-          {!isLight && (
-            <>
-              <div className={`tab${tab === 'mock' ? ' active' : ''}`} data-p="mock" onClick={() => setTab('mock')}>
-                <div className="code">Track</div><div className="nm">Mock Scores</div><div className="pc">📊</div>
-              </div>
-              <div className={`tab${tab === 'plan' ? ' active' : ''}`} data-p="plan" onClick={() => setTab('plan')}>
-                <div className="code">Strategy</div><div className="nm">Revision Plan</div><div className="pc">↗</div>
-              </div>
-              <div className={`tab${tab === 'how' ? ' active' : ''}`} data-p="how" onClick={() => setTab('how')}>
-                <div className="code">Mindset</div><div className="nm">How to Pass</div><div className="pc">★</div>
-              </div>
-              <div className={`tab${tab === 'res' ? ' active' : ''}`} data-p="res" onClick={() => setTab('res')}>
-                <div className="code">Learn</div><div className="nm">Resources</div><div className="pc">▶</div>
-              </div>
-              <div className={`tab${tab === 'papers' ? ' active' : ''}`} data-p="papers" onClick={() => setTab('papers')}>
-                <div className="code">Practice</div><div className="nm">Past Papers</div><div className="pc">📄</div>
-              </div>
-            </>
-          )}
-        </div>
+        </nav>
 
-        {/* PAPER VIEWS */}
-        {['fr', 'afm', 'aud'].map((pk) => (
-          <div key={pk} className={`view${tab === pk ? ' active' : ''}`}>
-            {tab === pk && (
-              <PaperView pk={pk} g={g} isLight={isLight}
-                openSet={openSecs[pk] || new Set()} onToggleSec={(si) => toggleSec(pk, si)}
-                onDone={toggleDone} onHours={setHours} onConf={setConf}
-                secNotes={store.secNotes || {}} onChNote={setChNote} onSecNote={setSecNote} />
-            )}
+        {/* ===== DASHBOARD ===== */}
+        {tab === 'home' && (
+          <div className="view active">
+            <WhyAnchor why={store.why} onSave={setWhy} />
+
+            <div className={encourage.cls}>
+              <span className="em">{encourage.em}</span><span>{encourage.text}</span>
+            </div>
+
+            <DailyEngine daily={store.daily || {}} goalMins={store.goalMins || 240}
+              nextUp={nextUp} onAddMinutes={addMinutes} onSetGoal={setGoal} />
+
+            <Reminders on={!!store.reminderOn} time={store.reminderTime || '20:00'}
+              daily={store.daily || {}} goalMins={store.goalMins || 240} onChange={updateReminder} />
+
+            <div className="nextup">
+              <h3>🎯 Study this next</h3>
+              <div className="lead">Ranked by weightage × weakness × time left. Do these first, highest marks per hour.</div>
+              <div className="nu-list">
+                {nextUp.length === 0 ? (
+                  <div className="nu-empty">🎉 Nothing flagged, every chapter is done and solid. Now live in the Mock Scores tab.</div>
+                ) : nextUp.map((it, i) => {
+                  const paperNm = PAPERS[it.pk].name.split(',')[0].split(' ').slice(0, 2).join(' ')
+                  return (
+                    <div className="nu-item" key={`${it.pk}-${it.si}-${it.ci}`} onClick={() => jumpTo(it.pk, it.si)}>
+                      <div className="nu-rank">{i + 1}</div>
+                      <div>
+                        <div className="nu-name">{it.name}</div>
+                        <div className="nu-why">{paperNm} · {it.reasons.join(' · ')}</div>
+                      </div>
+                      <div className="nu-badges">
+                        <span className={`nu-tag ${it.tier}`}>{it.tier === 'hi' ? 'High wt' : it.tier === 'med' ? 'Med wt' : 'Low wt'}</span>
+                        {it.conf === 1 && <span className="nu-tag red">Shaky</span>}
+                        {it.rev && <span className="nu-tag revise">Revise</span>}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+              <div className="pace">
+                <div className="pace-txt">To finish all {stats.total} chapters by <b>Nov 2</b>, cover <b>{pace.perWeek.toFixed(1)}/week</b> (~<b>{pace.perDay.toFixed(1)}/day</b>). {pace.remaining} left · {pace.d} days.</div>
+                <div className={`pace-state ${pace.cls}`}>{pace.label}</div>
+              </div>
+            </div>
+
+            <div className="overall">
+              <h3>Overall Group 1 Progress</h3>
+              <div className="pbar"><div style={{ width: (stats.total ? (stats.done / stats.total) * 100 : 0) + '%' }} /></div>
+              <div className="pbar-l">
+                <span><b>{stats.done}</b> of {stats.total} chapters</span>
+                <span>{stats.total ? Math.round((stats.done / stats.total) * 100) : 0}%</span>
+              </div>
+              <div className="paper-bars">
+                {['fr', 'afm', 'aud'].map((pk) => {
+                  const p = stats.per[pk]; const pct = p.pt ? Math.round((p.pd / p.pt) * 100) : 0
+                  const nm = pk === 'fr' ? 'FR' : pk === 'afm' ? 'AFM' : 'Audit'
+                  return (
+                    <div className="pb-row" key={pk} onClick={() => { setTab(pk); window.scrollTo({ top: 0, behavior: 'smooth' }) }} style={{ cursor: 'pointer' }}>
+                      <span className="pb-name">{nm}</span>
+                      <div className="pb-track"><div className="pb-fill" data-p={pk} style={{ width: pct + '%' }} /></div>
+                      <span className="pb-val"><b>{pct}%</b> · {p.pd}/{p.pt}</span>
+                    </div>
+                  )
+                })}
+              </div>
+              <button className={`collapse-btn${showStats ? ' open' : ''}`} onClick={() => setShowStats((v) => !v)}>
+                <span className="car">▸</span> {showStats ? 'Hide' : 'More'} stats
+              </button>
+              {showStats && (
+                <div className="mini-stats collapsible">
+                  <div className="ms"><div className="n">{Math.round(stats.hrs * 10) / 10}</div><div className="l">Hours logged</div></div>
+                  <div className="ms"><div className="n">{stats.shaky}</div><div className="l">Shaky (red)</div></div>
+                  <div className="ms"><div className="n">{stats.solid}</div><div className="l">Solid (green)</div></div>
+                  <div className="ms"><div className="n">{stats.hiLeft}</div><div className="l">High-wt left</div></div>
+                  <div className="ms"><div className="n">{stats.revDue}</div><div className="l">Due to revise</div></div>
+                </div>
+              )}
+            </div>
           </div>
-        ))}
+        )}
 
-        {/* MOCK */}
-        <div className={`view${tab === 'mock' ? ' active' : ''}`}>
-          {tab === 'mock' && <MockView mocks={mocks} setStore={setStore} />}
-        </div>
+        {/* ===== PAPER CHECKLISTS ===== */}
+        {['fr', 'afm', 'aud'].includes(tab) && (
+          <div className="view active">
+            <PaperView pk={tab} g={g} isLight={isLight}
+              openSet={openSecs[tab] || new Set()} onToggleSec={(si) => toggleSec(tab, si)}
+              onDone={toggleDone} onHours={setHours} onConf={setConf}
+              secNotes={store.secNotes || {}} onChNote={setChNote} onSecNote={setSecNote} />
+          </div>
+        )}
 
-        {/* PLAN */}
-        <div className={`view${tab === 'plan' ? ' active' : ''}`}>
-          {tab === 'plan' && <PlanView />}
-        </div>
+        {/* ===== MOCK SCORES ===== */}
+        {tab === 'mock' && (
+          <div className="view active"><MockView mocks={mocks} setStore={setStore} /></div>
+        )}
 
-        {/* HOW */}
-        <div className={`view${tab === 'how' ? ' active' : ''}`}>
-          {tab === 'how' && <HowView />}
-        </div>
+        {/* ===== PAST PAPERS ===== */}
+        {tab === 'papers' && (
+          <div className="view active"><PapersView /></div>
+        )}
 
-        {/* RESOURCES */}
-        <div className={`view${tab === 'res' ? ' active' : ''}`}>
-          {tab === 'res' && <ResourcesView />}
-        </div>
-
-        {/* PAST PAPERS */}
-        <div className={`view${tab === 'papers' ? ' active' : ''}`}>
-          {tab === 'papers' && <PapersView />}
-        </div>
+        {/* ===== INFORMATION (plan · how to pass · resources) ===== */}
+        {tab === 'info' && (
+          <div className="view active">
+            <PlanView />
+            <HowView />
+            <ResourcesView />
+          </div>
+        )}
 
         {/* TOOLBAR */}
         <div className="toolbar">
