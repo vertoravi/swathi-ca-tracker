@@ -187,6 +187,9 @@ export default function App() {
   const [tick, setTick] = useState(0) // force countdown recompute if needed
   const [showStats, setShowStats] = useState(false) // collapse extra stat tiles
   const [timerReq, setTimerReq] = useState(null)    // signal DailyEngine to start on a chapter
+  const [kittyFlash, setKittyFlash] = useState(null) // celebratory +₹ flash
+  const kittyFlashTimer = useRef(null)
+  const kittyPrev = useRef(null)
 
   /* ---------- mutators ---------- */
   const updateChapter = (k, patch) => {
@@ -323,6 +326,23 @@ export default function App() {
     const activeDays = Object.keys(store.daily || {}).filter((k) => isActiveDay(store.daily[k])).length
     return { chapter: stats.done, section: sectionsDone, day: activeDays }
   }, [ch, g, store.daily, stats.done])
+
+  // Celebrate when the kitty grows from real progress (not rule edits, not boot/sync)
+  useEffect(() => {
+    const unit = kitty.unit
+    const cur = kittyCounts[unit] || 0
+    if (!ready) { kittyPrev.current = { unit, count: cur }; return }
+    const prev = kittyPrev.current
+    if (prev && prev.unit === unit && cur > prev.count) {
+      const gained = (cur - prev.count) * (kitty.amt || 0)
+      if (gained > 0) {
+        setKittyFlash({ n: Date.now(), amt: gained })
+        clearTimeout(kittyFlashTimer.current)
+        kittyFlashTimer.current = setTimeout(() => setKittyFlash(null), 2000)
+      }
+    }
+    kittyPrev.current = { unit, count: cur }
+  }, [kittyCounts, kitty.unit, kitty.amt, ready])
 
   /* ---------- pace ---------- */
   const pace = useMemo(() => {
@@ -506,6 +526,7 @@ export default function App() {
   return (
     <div className={isLight ? 'light' : ''}>
       <div className={`syncbadge ${status}`} title="Click for sync detail" onClick={showDiag}>{syncLabel}</div>
+      {kittyFlash && <div className="kitty-flash" key={kittyFlash.n}>+{inr(kittyFlash.amt)} 🎉</div>}
 
       {/* DESKTOP SIDEBAR (hidden < 900px; top nav takes over) */}
       <aside className="sidebar">

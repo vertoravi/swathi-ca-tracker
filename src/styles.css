@@ -722,3 +722,16 @@
   .kitty-amtbox input:focus{outline:none;border-color:var(--gold)}
   .kitty-rule select{background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:5px 9px;
     font-size:12.5px;font-family:inherit;color:var(--ink);font-weight:600;cursor:pointer}
+
+  /* reward-kitty celebration flash */
+  .kitty-flash{position:fixed;left:50%;bottom:84px;transform:translateX(-50%);z-index:60;
+    background:var(--go);color:#fff;font-weight:800;font-size:18px;padding:12px 24px;border-radius:26px;
+    box-shadow:0 8px 26px rgba(46,145,96,.42);pointer-events:none;white-space:nowrap;
+    animation:kittyPop 2s ease forwards}
+  @keyframes kittyPop{
+    0%{opacity:0;transform:translate(-50%,22px) scale(.82)}
+    14%{opacity:1;transform:translate(-50%,0) scale(1.06)}
+    28%{transform:translate(-50%,0) scale(1)}
+    72%{opacity:1;transform:translate(-50%,0)}
+    100%{opacity:0;transform:translate(-50%,-26px)}
+  }
