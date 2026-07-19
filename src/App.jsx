@@ -1392,7 +1392,7 @@ function PapersView() {
 
       {['fr', 'afm', 'aud'].map((pk) => {
         const P = PAST_PAPERS[pk]
-        const hi = (PAPERS[pk].sections || []).filter((s) => s.p === 'hi')
+        const secs = PAPERS[pk].sections || []
         return (
           <div className="res-paper" key={pk}>
             <div className="res-paper-head"><span className={`wt ${P.tier}`}>{pk.toUpperCase()}</span><h4>{P.name}</h4></div>
@@ -1403,11 +1403,16 @@ function PapersView() {
                 </a>
               ))}
             </div>
-            {hi.length > 0 && (
+            {secs.length > 0 && (
               <div className="pp-focus">
-                <div className="pp-focus-h">🎯 High-probability focus — highest official weightage</div>
-                <ul>{hi.map((s, i) => <li key={i}><span className="pp-wt">{s.wt}</span> {s.t}</li>)}</ul>
-                <div className="pp-note">From ICAI's official section weightage — a study-priority guide, not a prediction of exact questions. Empirical per-chapter analysis from these papers is coming in the next update.</div>
+                <div className="pp-focus-h">📊 Official section weightage — study priority</div>
+                <ul>{secs.map((s, i) => (
+                  <li key={i} className={s.p === 'hi' ? 'hi' : ''}>
+                    <span className="pp-wt">{s.wt}</span> {s.t}
+                    {s.p === 'hi' && <span className="pp-flag">high</span>}
+                  </li>
+                ))}</ul>
+                <div className="pp-note">Official ICAI section weightage — an accurate study-priority map (highest-weight sections flagged). The empirical per-chapter layer — which chapters actually appeared, how often, and for how many marks across these attempts — unlocks once the paper PDFs are added.</div>
               </div>
             )}
           </div>
