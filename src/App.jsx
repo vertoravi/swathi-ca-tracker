@@ -603,6 +603,7 @@ export default function App() {
           <button onClick={exportJSON}>Export progress</button>
           <button onClick={importJSON}>Import backup</button>
           <button onClick={reset}>Reset tracker</button>
+          <InstallButton />
         </div>
         <DeviceLink code={code} onSwitch={switchCode} />
         <div className="savenote">Progress saves automatically & syncs across your devices · Export regularly as backup</div>
@@ -691,6 +692,31 @@ function DeviceLink({ code, onSwitch }) {
       <button className="dl-switch" onClick={onSwitch}>Switch / log out</button>
     </div>
   )
+}
+
+/* ============================================================
+   INSTALL BUTTON — Add to Home Screen (PWA)
+   ============================================================ */
+function InstallButton() {
+  const [can, setCan] = useState(typeof window !== 'undefined' && !!window.__canInstall)
+  useEffect(() => {
+    const on = () => setCan(true)
+    const off = () => setCan(false)
+    window.addEventListener('pwa-installable', on)
+    window.addEventListener('pwa-installed', off)
+    return () => { window.removeEventListener('pwa-installable', on); window.removeEventListener('pwa-installed', off) }
+  }, [])
+  const standalone = typeof window !== 'undefined' &&
+    (window.matchMedia?.('(display-mode: standalone)').matches || window.navigator.standalone)
+  if (standalone) return null
+  const isIOS = typeof navigator !== 'undefined' && /iphone|ipad|ipod/i.test(navigator.userAgent)
+  const install = async () => {
+    const p = window.__getInstallPrompt && window.__getInstallPrompt()
+    if (p) { p.prompt(); try { await p.userChoice } catch (e) {} }
+    else if (isIOS) alert('To install: tap the Share button, then “Add to Home Screen”.')
+    else alert('To install: open your browser menu (⋮) and choose “Install app” / “Add to Home Screen”.')
+  }
+  return <button className="install-btn" onClick={install}>⬇ Install as app</button>
 }
 
 /* ============================================================
