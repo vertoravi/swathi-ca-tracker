@@ -196,9 +196,28 @@
   .conf{display:flex;gap:3px}
   .conf b{width:22px;height:22px;border:1px solid var(--line);border-radius:5px;background:var(--panel-2);
     cursor:pointer;font-size:10px;font-weight:700;color:var(--dim);display:grid;place-items:center}
+  /* colour-code confidence even when unselected, so 1/2/3 read as shaky→solid */
+  .conf b[data-v="1"]{color:var(--shaky);border-color:rgba(192,67,42,.45)}
+  .conf b[data-v="2"]{color:var(--mid);border-color:rgba(192,138,26,.45)}
+  .conf b[data-v="3"]{color:var(--go);border-color:rgba(46,145,96,.45)}
   .conf b.s[data-v="1"]{background:var(--shaky);border-color:var(--shaky);color:#fff}
-  .conf b.s[data-v="2"]{background:var(--mid);border-color:var(--mid);color:#0f1211}
-  .conf b.s[data-v="3"]{background:var(--go);border-color:var(--go);color:#0f1211}
+  .conf b.s[data-v="2"]{background:var(--mid);border-color:var(--mid);color:#fff}
+  .conf b.s[data-v="3"]{background:var(--go);border-color:var(--go);color:#fff}
+  .hbox .hunit{color:var(--dim);font-size:11px}
+
+  /* controls legend at the top of each paper checklist */
+  .ch-legend{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;margin:2px 0 14px;
+    padding:10px 13px;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;
+    font-size:11.5px;color:var(--dim)}
+  .ch-legend b{color:var(--ink);font-weight:600}
+  .ch-legend .lg-tick{display:inline-block;width:13px;height:13px;border:1.5px solid var(--dim);
+    border-radius:4px;vertical-align:-2px;margin-right:2px}
+  .ch-legend .lg-conf{display:inline-flex;align-items:center;gap:5px}
+  .ch-legend .lg-conf b{width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;
+    border-radius:4px;font-size:11px;border:1px solid var(--line)}
+  .ch-legend .lg-conf b[data-v="1"]{color:var(--shaky);border-color:rgba(192,67,42,.45)}
+  .ch-legend .lg-conf b[data-v="2"]{color:var(--mid);border-color:rgba(192,138,26,.45)}
+  .ch-legend .lg-conf b[data-v="3"]{color:var(--go);border-color:rgba(46,145,96,.45)}
 
   .tips{background:var(--panel-2);border-left:3px solid var(--gold);border-radius:0 10px 10px 0;padding:14px 16px;margin:16px 0}
   .tips h4{font-size:11px;text-transform:uppercase;letter-spacing:0.14em;color:var(--gold);margin-bottom:8px}

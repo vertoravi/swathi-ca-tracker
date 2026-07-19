@@ -1003,6 +1003,13 @@ function PaperView({ pk, g, isLight, openSet, onToggleSec, onDone, onHours, onCo
       <div className="paper-head"><span className="paper-dot" style={{ background: P.dot }} /><h2>{P.name}</h2></div>
       <div className="paper-meta">{P.dur}</div>
 
+      <div className="ch-legend">
+        <span><i className="lg-tick" /> tick when studied</span>
+        {!isLight && <span>⏱ <b>hours</b> spent</span>}
+        <span className="lg-conf">confidence <b data-v="1">1</b> shaky <b data-v="2">2</b> ok <b data-v="3">3</b> solid</span>
+        <span>✎ <b>note</b></span>
+      </div>
+
       {!isLight && (
         <div className="heat">
           <h4>Confidence heatmap, {totalCh} chapters</h4>
@@ -1058,22 +1065,25 @@ function PaperView({ pk, g, isLight, openSet, onToggleSec, onDone, onHours, onCo
                     <div>
                       <div className="ch-name">{name}</div>
                       <div className="ch-meta">
-                        <span>{st.hrs > 0 ? st.hrs + ' h' : '·'}{st.conf ? ' · conf ' + st.conf + '/3' : ''}</span>
+                        <span>{st.done ? (st.hrs > 0 ? `Done · ${st.hrs}h` : 'Done') : (st.hrs > 0 ? `${st.hrs}h logged` : 'Not started')}{st.conf ? ` · ${['', 'shaky', 'getting there', 'solid'][st.conf]}` : ''}</span>
                         {revChip}
                         {st.note ? <span className="note-flag">📝 note</span> : null}
                       </div>
                     </div>
                     <div className="ch-ctrl">
                       {!isLight && (
-                        <div className="hbox">⏱
+                        <div className="hbox" title="Hours studied on this chapter">⏱
                           <input type="number" min="0" step="0.5" value={st.hrs || ''} placeholder="0"
                             onClick={(e) => e.stopPropagation()}
                             onChange={(e) => onHours(k, e.target.value)} />
+                          <span className="hunit">h</span>
                         </div>
                       )}
-                      <div className="conf">
+                      <div className="conf" title="Your confidence: 1 shaky → 3 solid" aria-label="Confidence rating">
                         {[1, 2, 3].map((v) => (
-                          <b key={v} data-v={v} className={st.conf === v ? 's' : ''} onClick={() => onConf(k, v)}>{v}</b>
+                          <b key={v} data-v={v} className={st.conf === v ? 's' : ''}
+                            title={v === 1 ? 'Shaky — needs work' : v === 2 ? 'Getting there' : 'Solid — exam-ready'}
+                            aria-label={`Confidence ${v} of 3`} onClick={() => onConf(k, v)}>{v}</b>
                         ))}
                       </div>
                       <button className={`note-btn${st.note ? ' has' : ''}${openNotes.has(k) ? ' open' : ''}`}
