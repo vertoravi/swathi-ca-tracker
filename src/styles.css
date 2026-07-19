@@ -515,3 +515,21 @@
   @media (prefers-reduced-motion: reduce){
     *,*::before,*::after{animation-duration:.001ms !important;transition-duration:.001ms !important;scroll-behavior:auto !important}
   }
+
+  /* ============================================================
+     PAST PAPERS
+     ============================================================ */
+  .pp-attempts{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+  .pp-chip{display:flex;flex-direction:column;gap:2px;background:var(--panel);border:1px solid var(--line);
+    border-radius:10px;padding:9px 13px;text-decoration:none;color:var(--ink);transition:.15s;min-width:120px}
+  .pp-chip:hover{border-color:var(--gold);transform:translateY(-1px);box-shadow:0 3px 10px rgba(60,50,20,.07);text-decoration:none}
+  .pp-chip b{font-size:13.5px;font-weight:800}
+  .pp-chip span{font-size:10.5px;color:var(--gold);font-weight:600}
+  .pp-focus{background:linear-gradient(135deg,rgba(184,134,11,.08),rgba(46,145,96,.05));
+    border:1px solid var(--line);border-radius:12px;padding:13px 15px;margin-bottom:6px}
+  .pp-focus-h{font-size:12px;font-weight:700;color:var(--ink);margin-bottom:8px}
+  .pp-focus ul{list-style:none;display:flex;flex-direction:column;gap:6px}
+  .pp-focus li{font-size:13px;color:var(--ink);display:flex;align-items:center;gap:9px}
+  .pp-wt{display:inline-block;min-width:52px;font-size:11px;font-weight:800;color:var(--gold);
+    background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:2px 8px;text-align:center}
+  .pp-note{font-size:11px;color:var(--dim);line-height:1.45;margin-top:10px;font-style:italic}

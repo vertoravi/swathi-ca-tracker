@@ -226,7 +226,7 @@ export default function App() {
   }
   const setMode = (m) => {
     setStore((s) => ({ ...s, mode: m }))
-    if (m === 'light' && ['mock', 'plan', 'how', 'res'].includes(tab)) setTab('fr')
+    if (m === 'light' && ['mock', 'plan', 'how', 'res', 'papers'].includes(tab)) setTab('fr')
   }
   const setWhy = (t) => setStore((s) => ({ ...s, why: t }))
   const setChNote = (k, t) => updateChapter(k, { note: t })
@@ -575,6 +575,9 @@ export default function App() {
               <div className={`tab${tab === 'res' ? ' active' : ''}`} data-p="res" onClick={() => setTab('res')}>
                 <div className="code">Learn</div><div className="nm">Resources</div><div className="pc">▶</div>
               </div>
+              <div className={`tab${tab === 'papers' ? ' active' : ''}`} data-p="papers" onClick={() => setTab('papers')}>
+                <div className="code">Practice</div><div className="nm">Past Papers</div><div className="pc">📄</div>
+              </div>
             </>
           )}
         </div>
@@ -609,6 +612,11 @@ export default function App() {
         {/* RESOURCES */}
         <div className={`view${tab === 'res' ? ' active' : ''}`}>
           {tab === 'res' && <ResourcesView />}
+        </div>
+
+        {/* PAST PAPERS */}
+        <div className={`view${tab === 'papers' ? ' active' : ''}`}>
+          {tab === 'papers' && <PapersView />}
         </div>
 
         {/* TOOLBAR */}
@@ -1313,6 +1321,98 @@ function ResourcesView() {
       })}
 
       <div className="savenote">Links open in a new tab. Faculty picks are popular community-rated names — try a lecture before committing a full course.</div>
+    </>
+  )
+}
+
+/* ============================================================
+   PAST PAPERS VIEW — official ICAI question papers (New Scheme,
+   first examined May 2024). Direct PDF links per attempt per paper.
+   High-probability focus is derived from ICAI's official section
+   weightage (from data.js) — labelled as guidance, not a prediction.
+   ============================================================ */
+const PAST_PAPERS = {
+  fr: {
+    name: 'Financial Reporting', tier: 'fr', qp: [
+      { s: 'May 2026', u: 'https://resource.cdn.icai.org/92055bos-aps4903-final-may2026-p1.pdf' },
+      { s: 'Jan 2026', u: 'https://resource.cdn.icai.org/90237bos-aps3809-final-p1.pdf' },
+      { s: 'Sep 2025', u: 'https://resource.cdn.icai.org/88181bos-aps2265-final-p1.pdf' },
+      { s: 'May 2025', u: 'https://resource.cdn.icai.org/85768bos-aps471-final-p1.pdf' },
+      { s: 'Nov 2024', u: 'https://resource.cdn.icai.org/82721bos66806.pdf' },
+      { s: 'May 2024', u: 'https://resource.cdn.icai.org/80128bos64233.pdf' },
+    ],
+  },
+  afm: {
+    name: 'Advanced Financial Management', tier: 'afm', qp: [
+      { s: 'May 2026', u: 'https://resource.cdn.icai.org/92056bos-aps4903-final-may2026-p2.pdf' },
+      { s: 'Jan 2026', u: 'https://resource.cdn.icai.org/90270bos-aps3809-final-p2.pdf' },
+      { s: 'Sep 2025', u: 'https://resource.cdn.icai.org/88182bos-aps2265-final-p2.pdf' },
+      { s: 'May 2025', u: 'https://resource.cdn.icai.org/85769bos-aps471-final-p2.pdf' },
+      { s: 'Nov 2024', u: 'https://resource.cdn.icai.org/82720bos66805.pdf' },
+      { s: 'May 2024', u: 'https://resource.cdn.icai.org/80144bos64256.pdf' },
+    ],
+  },
+  aud: {
+    name: 'Advanced Auditing', tier: 'aud', qp: [
+      { s: 'May 2026', u: 'https://resource.cdn.icai.org/92098bos-aps4903-final-may2026-p3.pdf' },
+      { s: 'Jan 2026', u: 'https://resource.cdn.icai.org/90287bos-aps3809-final-p3.pdf' },
+      { s: 'Sep 2025', u: 'https://resource.cdn.icai.org/88298bos-final160925-p3.pdf' },
+      { s: 'May 2025', u: 'https://resource.cdn.icai.org/85945bos-aps471-final-p3.pdf' },
+      { s: 'Nov 2024', u: 'https://resource.cdn.icai.org/82760bos66833.pdf' },
+      { s: 'May 2024', u: 'https://resource.cdn.icai.org/80192bos64339.pdf' },
+    ],
+  },
+}
+
+function PapersView() {
+  return (
+    <>
+      <div className="paper-head"><h2>Past Papers</h2></div>
+      <div className="mock-intro">
+        Official ICAI question papers, <b>New Scheme</b> (first examined May 2024 — so these are
+        every real attempt to date). For examiner solutions, open <b>ICAI Suggested Answers</b>.
+        Old-scheme papers are a different syllabus and are intentionally left out.
+      </div>
+
+      <div className="res-official">
+        <h4>Official ICAI</h4>
+        <div className="res-grid">
+          <a className="res-card official" href="https://www.icai.org/post/suggested-answer-final-course" target="_blank" rel="noopener noreferrer">
+            <div className="res-t">Suggested Answers (Final)</div>
+            <div className="res-d">Examiner solutions, every attempt</div>
+            <span className="res-go">Open ↗</span>
+          </a>
+          <a className="res-card official" href="https://www.icai.org/post/question-papers-final-course" target="_blank" rel="noopener noreferrer">
+            <div className="res-t">All Question Papers (Final)</div>
+            <div className="res-d">ICAI source page for every session</div>
+            <span className="res-go">Open ↗</span>
+          </a>
+        </div>
+      </div>
+
+      {['fr', 'afm', 'aud'].map((pk) => {
+        const P = PAST_PAPERS[pk]
+        const hi = (PAPERS[pk].sections || []).filter((s) => s.p === 'hi')
+        return (
+          <div className="res-paper" key={pk}>
+            <div className="res-paper-head"><span className={`wt ${P.tier}`}>{pk.toUpperCase()}</span><h4>{P.name}</h4></div>
+            <div className="pp-attempts">
+              {P.qp.map((a, i) => (
+                <a className="pp-chip" key={i} href={a.u} target="_blank" rel="noopener noreferrer">
+                  <b>{a.s}</b><span>Question paper ↗</span>
+                </a>
+              ))}
+            </div>
+            {hi.length > 0 && (
+              <div className="pp-focus">
+                <div className="pp-focus-h">🎯 High-probability focus — highest official weightage</div>
+                <ul>{hi.map((s, i) => <li key={i}><span className="pp-wt">{s.wt}</span> {s.t}</li>)}</ul>
+                <div className="pp-note">From ICAI's official section weightage — a study-priority guide, not a prediction of exact questions. Empirical per-chapter analysis from these papers is coming in the next update.</div>
+              </div>
+            )}
+          </div>
+        )
+      })}
     </>
   )
 }
