@@ -343,3 +343,31 @@
   .dl-switch{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 13px;
     font-size:12px;font-weight:600;color:var(--dim);cursor:pointer;font-family:inherit;transition:.15s}
   .dl-switch:hover{background:var(--panel-2);color:var(--ink)}
+
+  /* ============================================================
+     HOMEPAGE + CODE-ENTRY LOGIN
+     ============================================================ */
+  .home{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;
+    background:radial-gradient(1100px 520px at 50% -8%, rgba(184,134,11,.12), transparent 60%), var(--bg)}
+  .home-card{max-width:520px;width:100%;background:var(--panel);border:1px solid var(--line);
+    border-radius:20px;overflow:hidden;box-shadow:0 12px 44px rgba(60,50,20,.12)}
+  .home-hero{padding:36px 30px 26px;text-align:center;
+    background:linear-gradient(135deg,rgba(184,134,11,.11),rgba(46,145,96,.07));border-bottom:1px solid var(--line)}
+  .home-kicker{font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:var(--gold);font-weight:700}
+  .home-banner{font-size:34px;font-weight:800;letter-spacing:-.02em;line-height:1.06;margin:12px 0 8px;color:var(--ink)}
+  .home-banner .we{display:block;color:var(--gold);font-size:18px;font-weight:800;letter-spacing:.03em;
+    text-transform:uppercase;margin-top:4px}
+  .home-count{display:inline-block;font-size:12.5px;color:var(--ink);background:var(--panel);
+    border:1px solid var(--line);border-radius:20px;padding:5px 15px}
+  .home-count b{color:var(--gold);font-size:14px}
+  .home-line{font-size:14.5px;font-style:italic;color:var(--dim);line-height:1.55;margin:16px auto 0;max-width:410px}
+  .home-feats{display:flex;flex-wrap:wrap;gap:8px 16px;justify-content:center;margin-top:18px;
+    font-size:12px;color:var(--dim);font-weight:500}
+  .home-login{padding:26px 30px 30px}
+  .home-login h3{font-size:10px;text-transform:uppercase;letter-spacing:.16em;color:var(--gold);
+    margin-bottom:11px;text-align:center}
+  @media (max-width:480px){
+    .home-banner{font-size:28px}
+    .home-hero{padding:28px 22px 22px}
+    .home-login{padding:22px}
+  }

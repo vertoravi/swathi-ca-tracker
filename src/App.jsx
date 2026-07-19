@@ -566,37 +566,57 @@ export default function App() {
 }
 
 /* ============================================================
-   SHARE-CODE GATE  (persistence entry screen — no auth)
+   HOMEPAGE + CODE-ENTRY LOGIN  (share-code, no auth)
    ============================================================ */
+const HOME_LINES = [
+  'Every chapter you tick is a mark closer to those two letters after your name.',
+  'You don’t have to do all of it today. You just have to do the next right thing.',
+  'Consistency beats intensity. Show up, tick one more, repeat.',
+  'The version of you on result day is built by the hours you put in now.',
+  'Hard is not the same as impossible. This is just hard — and you do hard things.',
+  '“Ready” is the goal, not “perfect”. Get ready, one chapter at a time.',
+  'Small progress today. Steady progress tomorrow. Unstoppable by November.',
+]
+
 function Gate({ onChoose }) {
   const [val, setVal] = useState('')
   const submit = () => { const c = val.trim(); if (c) onChoose(c) }
+  const d = daysLeft()
+  const line = HOME_LINES[d % HOME_LINES.length]
   return (
-    <div className="gate-screen">
-      <div className="gate">
-        <div className="gate-banner">Swathi,<span className="we">We GOT THIS.</span></div>
-        <h3>Your sync code</h3>
-        <p className="gate-lead">
-          One code keeps your progress in sync across every device — phone, laptop, tablet.
-          Enter your code to continue, or generate a new one to start fresh.
-        </p>
-        <input
-          className="gate-input"
-          value={val}
-          onChange={(e) => setVal(e.target.value.toUpperCase())}
-          onKeyDown={(e) => { if (e.key === 'Enter') submit() }}
-          placeholder="e.g. SWA-4X9K"
-          spellCheck={false}
-          autoFocus
-        />
-        <div className="gate-actions">
-          <button className="gate-go" onClick={submit} disabled={!val.trim()}>Continue</button>
-          <button className="gate-gen" onClick={() => setVal(genCode())}>Generate a code</button>
+    <div className="home">
+      <div className="home-card">
+        <div className="home-hero">
+          <div className="home-kicker">CA Final · Group 1 · New Scheme · Nov 2026</div>
+          <div className="home-banner">Swathi,<span className="we">We GOT THIS.</span></div>
+          <div className="home-count"><b>{d}</b> days to FR · Group 1 begins Nov 2</div>
+          <p className="home-line">{'“' + line + '”'}</p>
+          <div className="home-feats">
+            <span>✓ 166 chapters · 3 papers</span>
+            <span>🎯 Study-now engine</span>
+            <span>🔄 Syncs across your devices</span>
+          </div>
         </div>
-        <p className="gate-tiny">
-          Tip: save this code somewhere. Opening the tracker with the same code on any device
-          shows the same progress. Anyone with the code can view and edit — keep it to yourself.
-        </p>
+        <div className="home-login">
+          <h3>Enter your code to begin</h3>
+          <input
+            className="gate-input"
+            value={val}
+            onChange={(e) => setVal(e.target.value.toUpperCase())}
+            onKeyDown={(e) => { if (e.key === 'Enter') submit() }}
+            placeholder="e.g. SWA-4X9K"
+            spellCheck={false}
+            autoFocus
+          />
+          <div className="gate-actions">
+            <button className="gate-go" onClick={submit} disabled={!val.trim()}>Continue →</button>
+            <button className="gate-gen" onClick={() => setVal(genCode())}>Generate a new code</button>
+          </div>
+          <p className="gate-tiny">
+            Your code is your login — it keeps progress synced across every device. First time?
+            Generate one and save it. Anyone with the code can view and edit, so keep it to yourself.
+          </p>
+        </div>
       </div>
     </div>
   )
