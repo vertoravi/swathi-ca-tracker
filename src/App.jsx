@@ -29,6 +29,8 @@ function normalize(d) {
     secNotes: (d && d.secNotes) || {},   // { `${paper}-${si}`: text }
     daily: (d && d.daily) || {},          // { 'YYYY-MM-DD': { min, done } } — study ledger
     goalMins: (d && typeof d.goalMins === 'number') ? d.goalMins : 240, // daily target (default 4h)
+    reminderOn: (d && d.reminderOn) || false,
+    reminderTime: (d && d.reminderTime) || '20:00',
     why: (d && d.why) || '',
     mode: (d && d.mode) || 'full',
   }
@@ -215,6 +217,7 @@ export default function App() {
     })
   }
   const setGoal = (mins) => setStore((s) => ({ ...s, goalMins: Math.max(30, mins) }))
+  const updateReminder = (patch) => setStore((s) => ({ ...s, ...patch }))
   const setHours = (k, v) => updateChapter(k, { hrs: parseFloat(v) || 0, hrsAt: Date.now() })
   const setConf = (k, v) => {
     const cur = g(k)
@@ -478,6 +481,10 @@ export default function App() {
         <DailyEngine daily={store.daily || {}} goalMins={store.goalMins || 240}
           nextUp={nextUp} onAddMinutes={addMinutes} onSetGoal={setGoal} />
 
+        {/* DAILY REMINDER */}
+        <Reminders on={!!store.reminderOn} time={store.reminderTime || '20:00'}
+          daily={store.daily || {}} goalMins={store.goalMins || 240} onChange={updateReminder} />
+
         {/* STUDY NOW */}
         <div className="nextup">
           <h3>🎯 Study this next</h3>
@@ -717,6 +724,94 @@ function InstallButton() {
     else alert('To install: open your browser menu (⋮) and choose “Install app” / “Add to Home Screen”.')
   }
   return <button className="install-btn" onClick={install}>⬇ Install as app</button>
+}
+
+/* ============================================================
+   DAILY REMINDER — local notification when app is open/backgrounded,
+   best-effort background via periodic sync on installed Chrome PWAs.
+   ============================================================ */
+const REMIND_KEY = 'ca-final-g1-swathi-remind-last' // per-device: last date a reminder fired
+
+function Reminders({ on, time, daily, goalMins, onChange }) {
+  const supported = typeof window !== 'undefined' && 'Notification' in window
+  const [perm, setPerm] = useState(supported ? Notification.permission : 'unsupported')
+
+  const enable = async () => {
+    if (!supported) { alert('This browser does not support notifications.'); return }
+    let p = Notification.permission
+    if (p === 'default') { try { p = await Notification.requestPermission() } catch (e) {} }
+    setPerm(p)
+    if (p !== 'granted') { alert('Notifications are blocked. Enable them for this site in your browser settings, then try again.'); return }
+    onChange({ reminderOn: true })
+    // Best-effort background reminder on installed Chrome PWAs (browser decides exact timing).
+    try {
+      const reg = await navigator.serviceWorker?.ready
+      if (reg && 'periodicSync' in reg) {
+        const st = await navigator.permissions.query({ name: 'periodic-background-sync' })
+        if (st.state === 'granted') await reg.periodicSync.register('daily-reminder', { minInterval: 24 * 60 * 60 * 1000 })
+      }
+    } catch (e) {}
+  }
+  const disable = () => onChange({ reminderOn: false })
+
+  // While the app is open/backgrounded: once past the set time, nudge if today's goal isn't met.
+  useEffect(() => {
+    if (!on || !supported) return
+    let stopped = false
+    // Prefer the service worker (works on mobile); fall back to page Notification (desktop).
+    const notify = async (title, opts) => {
+      try {
+        const reg = await navigator.serviceWorker?.ready
+        if (reg && reg.showNotification) { await reg.showNotification(title, opts); return true }
+      } catch (e) {}
+      try { new Notification(title, opts); return true } catch (e) { return false }
+    }
+    const check = async () => {
+      if (Notification.permission !== 'granted') return
+      const now = new Date()
+      const hhmm = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+      if (hhmm < time) return
+      const key = dstr()
+      let last = null
+      try { last = localStorage.getItem(REMIND_KEY) } catch (e) {}
+      if (last === key) return
+      const todayMin = (daily[key] && daily[key].min) || 0
+      if (todayMin >= goalMins) { try { localStorage.setItem(REMIND_KEY, key) } catch (e) {}; return }
+      const { streak } = computeStreaks(daily)
+      const body = streak > 0
+        ? `Keep your ${streak}-day streak alive 🔥 A short session counts.`
+        : `A little today beats a lot tomorrow. Open the tracker and tick one.`
+      const ok = await notify('Study time, Swathi 📚', { body, icon: '/icon-192.png', badge: '/icon-192.png', tag: 'daily-reminder' })
+      if (ok && !stopped) { try { localStorage.setItem(REMIND_KEY, key) } catch (e) {} }
+    }
+    check()
+    const id = setInterval(check, 60000)
+    return () => { stopped = true; clearInterval(id) }
+  }, [on, time, daily, goalMins, supported])
+
+  const blocked = perm === 'denied'
+  return (
+    <div className="remind">
+      <div className="remind-main">
+        <span className="remind-ico">🔔</span>
+        <div>
+          <div className="remind-t">Daily study reminder</div>
+          <div className="remind-d">
+            {!supported ? 'Not supported on this browser.'
+              : on ? `On · nudges at ${time} if you haven’t hit your goal.`
+              : 'Get a gentle nudge to keep your streak alive.'}
+          </div>
+        </div>
+      </div>
+      <div className="remind-ctrl">
+        <input type="time" value={time} disabled={!supported}
+          onChange={(e) => onChange({ reminderTime: e.target.value })} />
+        {on
+          ? <button className="remind-off" onClick={disable}>Turn off</button>
+          : <button className="remind-on" onClick={enable} disabled={!supported || blocked}>{blocked ? 'Blocked' : 'Turn on'}</button>}
+      </div>
+    </div>
+  )
 }
 
 /* ============================================================
