@@ -26,7 +26,9 @@ function normalize(d) {
   return {
     ch: (d && d.ch) || {},
     mocks: (d && d.mocks) || [],
-    secNotes: (d && d.secNotes) || {}, // { `${paper}-${si}`: text }
+    secNotes: (d && d.secNotes) || {},   // { `${paper}-${si}`: text }
+    daily: (d && d.daily) || {},          // { 'YYYY-MM-DD': { min, done } } — study ledger
+    goalMins: (d && typeof d.goalMins === 'number') ? d.goalMins : 240, // daily target (default 4h)
     why: (d && d.why) || '',
     mode: (d && d.mode) || 'full',
   }
@@ -70,6 +72,11 @@ const EXAM = new Date('2026-11-02T00:00:00+05:30')
 const DAY = 86400000
 const daysLeft = () => Math.max(1, Math.ceil((EXAM - new Date()) / DAY))
 const ck = (p, si, ci) => `${p}-${si}-${ci}`
+// local YYYY-MM-DD (not UTC) — for the daily study ledger / streak / heatmap
+const dstr = (d = new Date()) => {
+  const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), da = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${da}`
+}
 const isToday = (ts) => {
   if (!ts) return false
   const d = new Date(ts), n = new Date()
@@ -123,9 +130,12 @@ export default function App() {
     setStore(loadLocal(code))
     ;(async () => {
       if (!supabase) { setStatus('offline'); setSyncErr('not configured — Supabase env vars missing from this build'); if (!cancelled) setReady(true); return }
+      // Never let a stalled network block local saving: time-box the boot fetch.
+      const ctrl = new AbortController()
+      const to = setTimeout(() => ctrl.abort(), 6000)
       try {
         const { data, error } = await supabase
-          .from('progress').select('data').eq('share_code', code).maybeSingle()
+          .from('progress').select('data').eq('share_code', code).abortSignal(ctrl.signal).maybeSingle()
         if (cancelled) return
         if (error) throw error
         if (data && data.data) {
@@ -135,8 +145,9 @@ export default function App() {
         }
         setStatus('synced'); setSyncErr('')
       } catch (e) {
-        if (!cancelled) { setStatus('offline'); setSyncErr(e?.message || 'fetch failed') }
+        if (!cancelled) { setStatus('offline'); setSyncErr(e?.name === 'AbortError' ? 'network timeout' : (e?.message || 'fetch failed')) }
       } finally {
+        clearTimeout(to)
         if (!cancelled) setReady(true)
       }
     })()
@@ -176,10 +187,34 @@ export default function App() {
       return { ...s, ch: { ...s.ch, [k]: { ...prev, ...patch } } }
     })
   }
+  const todayKey = dstr()
   const toggleDone = (k) => {
     const cur = g(k)
-    updateChapter(k, { done: !cur.done, doneAt: !cur.done ? Date.now() : null })
+    const nowDone = !cur.done
+    setStore((s) => {
+      const prev = s.ch?.[k] || { done: false, hrs: 0, conf: 0, doneAt: null }
+      const ch = { ...s.ch, [k]: { ...prev, done: nowDone, doneAt: nowDone ? Date.now() : null } }
+      const day = s.daily?.[todayKey] || { min: 0, done: 0 }
+      const done = Math.max(0, (day.done || 0) + (nowDone ? 1 : -1))
+      const daily = { ...(s.daily || {}), [todayKey]: { ...day, done } }
+      return { ...s, ch, daily }
+    })
   }
+  // Add studied minutes to today's ledger, and (optionally) to a chapter's hours.
+  const addMinutes = (mins, key) => {
+    if (!mins || mins <= 0) return
+    setStore((s) => {
+      const day = s.daily?.[todayKey] || { min: 0, done: 0 }
+      const daily = { ...(s.daily || {}), [todayKey]: { ...day, min: (day.min || 0) + mins } }
+      let ch = s.ch
+      if (key) {
+        const prev = s.ch?.[key] || { done: false, hrs: 0, conf: 0, doneAt: null }
+        ch = { ...s.ch, [key]: { ...prev, hrs: Math.round(((prev.hrs || 0) + mins / 60) * 10) / 10, hrsAt: Date.now() } }
+      }
+      return { ...s, daily, ch }
+    })
+  }
+  const setGoal = (mins) => setStore((s) => ({ ...s, goalMins: Math.max(30, mins) }))
   const setHours = (k, v) => updateChapter(k, { hrs: parseFloat(v) || 0, hrsAt: Date.now() })
   const setConf = (k, v) => {
     const cur = g(k)
@@ -439,6 +474,10 @@ export default function App() {
           <span className="em">{encourage.em}</span><span>{encourage.text}</span>
         </div>
 
+        {/* DAILY ENGINE — streak · timer · goal */}
+        <DailyEngine daily={store.daily || {}} goalMins={store.goalMins || 240}
+          nextUp={nextUp} onAddMinutes={addMinutes} onSetGoal={setGoal} />
+
         {/* STUDY NOW */}
         <div className="nextup">
           <h3>🎯 Study this next</h3>
@@ -650,6 +689,140 @@ function DeviceLink({ code, onSwitch }) {
       <span className="dl-code">Sync code: <b>{code}</b></span>
       <button className="dl-copy" onClick={copy}>{copied ? 'Copied ✓' : 'Copy device link'}</button>
       <button className="dl-switch" onClick={onSwitch}>Switch / log out</button>
+    </div>
+  )
+}
+
+/* ============================================================
+   DAILY ENGINE — streak + heatmap · Pomodoro timer · goal ring
+   ============================================================ */
+const fmtMin = (m) => { const h = Math.floor(m / 60), mm = m % 60; return h ? `${h}h ${mm}m` : `${mm}m` }
+const mmss = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
+
+function isActiveDay(d) { return !!d && (((d.min || 0) > 0) || ((d.done || 0) > 0)) }
+function computeStreaks(daily) {
+  const day = new Date(); day.setHours(12, 0, 0, 0)
+  if (!isActiveDay(daily[dstr(day)])) day.setDate(day.getDate() - 1) // today not logged yet → don't break streak
+  let cur = 0
+  while (isActiveDay(daily[dstr(day)])) { cur++; day.setDate(day.getDate() - 1) }
+  const keys = Object.keys(daily).filter((k) => isActiveDay(daily[k])).sort()
+  let best = 0, run = 0, prev = null
+  for (const k of keys) {
+    if (prev) {
+      const diff = Math.round((new Date(k) - new Date(prev)) / DAY)
+      run = diff === 1 ? run + 1 : 1
+    } else run = 1
+    best = Math.max(best, run); prev = k
+  }
+  return { streak: cur, best: Math.max(best, cur) }
+}
+
+function DailyEngine({ daily, goalMins, nextUp, onAddMinutes, onSetGoal }) {
+  const today = dstr()
+  const todayMin = (daily[today] && daily[today].min) || 0
+  const { streak, best } = useMemo(() => computeStreaks(daily), [daily])
+
+  // ---- timer (timestamp-based so mobile throttling / lock doesn't lose time) ----
+  const [running, setRunning] = useState(false)
+  const [accum, setAccum] = useState(0)        // banked seconds from prior segments
+  const [startedAt, setStartedAt] = useState(0)
+  const [, force] = useState(0)
+  const [chKey, setChKey] = useState('')
+  useEffect(() => {
+    if (!running) return
+    const id = setInterval(() => force((n) => n + 1), 1000)
+    return () => clearInterval(id)
+  }, [running])
+  useEffect(() => {
+    if (!chKey && nextUp && nextUp.length) setChKey(ck(nextUp[0].pk, nextUp[0].si, nextUp[0].ci))
+  }, [nextUp]) // eslint-disable-line
+
+  const elapsed = accum + (running ? Math.floor((Date.now() - startedAt) / 1000) : 0)
+  const start = () => { setStartedAt(Date.now()); setRunning(true) }
+  const pause = () => { setAccum((a) => a + Math.floor((Date.now() - startedAt) / 1000)); setRunning(false) }
+  const clear = () => { setRunning(false); setAccum(0); setStartedAt(0) }
+  const stopLog = () => {
+    const total = accum + (running ? Math.floor((Date.now() - startedAt) / 1000) : 0)
+    const mins = Math.round(total / 60)
+    if (mins > 0) onAddMinutes(mins, chKey || null)
+    clear()
+  }
+
+  const opts = (nextUp || []).slice(0, 12)
+  const pct = Math.min(100, goalMins ? Math.round((todayMin / goalMins) * 100) : 0)
+  const R = 34, C = 2 * Math.PI * R
+  const GOALS = [120, 180, 240, 300, 360]
+
+  // heatmap: last 35 days, oldest → today
+  const cells = []
+  for (let i = 34; i >= 0; i--) {
+    const dt = new Date(); dt.setHours(12, 0, 0, 0); dt.setDate(dt.getDate() - i)
+    const key = dstr(dt); const rec = daily[key] || {}
+    const min = rec.min || 0
+    let lvl = 0
+    if (min >= 180) lvl = 4; else if (min >= 120) lvl = 3; else if (min >= 60) lvl = 2; else if (min > 0 || (rec.done || 0) > 0) lvl = 1
+    cells.push({ key, lvl, min, done: rec.done || 0 })
+  }
+
+  return (
+    <div className="daily">
+      <div className="daily-top">
+        <div className="ring-wrap">
+          <svg width="92" height="92" viewBox="0 0 92 92">
+            <circle cx="46" cy="46" r={R} className="ring-bg" />
+            <circle cx="46" cy="46" r={R} className="ring-fg"
+              strokeDasharray={C} strokeDashoffset={C * (1 - pct / 100)}
+              transform="rotate(-90 46 46)" />
+          </svg>
+          <div className="ring-center">
+            <div className="ring-min">{fmtMin(todayMin)}</div>
+            <div className="ring-goal">of {fmtMin(goalMins)}</div>
+          </div>
+        </div>
+
+        <div className="daily-mid">
+          <div className="streak">🔥 <b>{streak}</b> day{streak === 1 ? '' : 's'} streak <span>· best {best}</span></div>
+
+          <div className="goal-row">
+            <span className="goal-lbl">Daily goal</span>
+            {GOALS.map((gm) => (
+              <button key={gm} className={goalMins === gm ? 'on' : ''} onClick={() => onSetGoal(gm)}>{fmtMin(gm)}</button>
+            ))}
+          </div>
+
+          <div className="timer">
+            <div className="timer-time">{mmss(elapsed)}</div>
+            <select className="timer-sel" value={chKey} onChange={(e) => setChKey(e.target.value)}>
+              <option value="">General revision (no chapter)</option>
+              {opts.map((it) => {
+                const k = ck(it.pk, it.si, it.ci)
+                const p = PAPERS[it.pk].name.split(',')[0].split(' ')[0]
+                return <option key={k} value={k}>{p} · {it.name}</option>
+              })}
+            </select>
+            <div className="timer-btns">
+              {!running && <button className="t-go" onClick={start}>▶ {elapsed > 0 ? 'Resume' : 'Start'}</button>}
+              {running && <button className="t-pause" onClick={pause}>⏸ Pause</button>}
+              {elapsed > 0 && <button className="t-stop" onClick={stopLog}>■ Stop &amp; log</button>}
+            </div>
+            <div className="quick">
+              Studied offline?
+              <button onClick={() => onAddMinutes(15, chKey || null)}>+15m</button>
+              <button onClick={() => onAddMinutes(30, chKey || null)}>+30m</button>
+              <button onClick={() => onAddMinutes(60, chKey || null)}>+1h</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="heat-cal">
+        <div className="heat-cal-grid">
+          {cells.map((c) => (
+            <div key={c.key} className={`hc l${c.lvl}`} title={`${c.key} · ${fmtMin(c.min)}${c.done ? ` · ${c.done} done` : ''}`} />
+          ))}
+        </div>
+        <div className="heat-cal-legend"><span>Last 5 weeks</span><span>less</span><i className="l0" /><i className="l1" /><i className="l2" /><i className="l3" /><i className="l4" /><span>more</span></div>
+      </div>
     </div>
   )
 }
