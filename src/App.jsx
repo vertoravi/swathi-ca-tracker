@@ -183,6 +183,7 @@ export default function App() {
   const [openSecs, setOpenSecs] = useState({}) // {paper: Set(si)}
   const [tick, setTick] = useState(0) // force countdown recompute if needed
   const [showStats, setShowStats] = useState(false) // collapse extra stat tiles
+  const [timerReq, setTimerReq] = useState(null)    // signal DailyEngine to start on a chapter
 
   /* ---------- mutators ---------- */
   const updateChapter = (k, patch) => {
@@ -222,6 +223,13 @@ export default function App() {
   const updateReminder = (patch) => setStore((s) => ({ ...s, ...patch }))
   const focus = store.focus || ''
   const setFocus = (p) => setStore((s) => ({ ...s, focus: s.focus === p ? '' : p }))
+  // Mark a due chapter as revised now (keeps it done, resets the spaced-revision clock)
+  const markRevised = (k) => updateChapter(k, { done: true, doneAt: Date.now() })
+  // Start the study timer on a chapter from anywhere, and bring the timer into view
+  const startTimerOn = (k) => {
+    setTimerReq({ k, n: Date.now() })
+    setTimeout(() => { const el = document.querySelector('.daily'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }) }, 60)
+  }
   const setHours = (k, v) => updateChapter(k, { hrs: parseFloat(v) || 0, hrsAt: Date.now() })
   const setConf = (k, v) => {
     const cur = g(k)
@@ -283,6 +291,21 @@ export default function App() {
     items.sort((a, b) => b.score - a.score)
     return items.slice(0, 4)
   }, [ch, g, focus])
+
+  /* ---------- revise-today (spaced revision due) ---------- */
+  const reviseList = useMemo(() => {
+    const items = []
+    Object.keys(PAPERS).forEach((pk) =>
+      PAPERS[pk].sections.forEach((s, si) =>
+        s.ch.forEach((name, ci) => {
+          const k = ck(pk, si, ci); const st = g(k); const rev = reviseDue(st)
+          if (rev) items.push({ pk, si, ci, name, k, rev, conf: st.conf })
+        })
+      )
+    )
+    items.sort((a, b) => (a.rev === 'overdue' ? 0 : 1) - (b.rev === 'overdue' ? 0 : 1))
+    return items.slice(0, 8)
+  }, [ch, g])
 
   /* ---------- pace ---------- */
   const pace = useMemo(() => {
@@ -527,6 +550,8 @@ export default function App() {
         {/* ===== DASHBOARD ===== */}
         {tab === 'home' && (
           <div className="view active">
+            <Search onJump={jumpTo} />
+
             <div className="focusbar">
               <span className="focusbar-l">🎯 Current focus</span>
               <div className="focusbar-btns">
@@ -550,7 +575,7 @@ export default function App() {
             </div>
 
             <DailyEngine daily={store.daily || {}} goalMins={store.goalMins || 240}
-              nextUp={nextUp} onAddMinutes={addMinutes} onSetGoal={setGoal} />
+              nextUp={nextUp} onAddMinutes={addMinutes} onSetGoal={setGoal} startReq={timerReq} />
 
             <Reminders on={!!store.reminderOn} time={store.reminderTime || '20:00'}
               daily={store.daily || {}} goalMins={store.goalMins || 240} onChange={updateReminder} />
@@ -558,23 +583,40 @@ export default function App() {
             <div className="nextup">
               <h3>🎯 Study this next</h3>
               <div className="lead">Ranked by weightage × weakness × time left{focus ? <> · <b>{focus === 'fr' ? 'FR' : focus === 'afm' ? 'AFM' : 'Audit'} prioritised</b></> : ''}. Do these first, highest marks per hour.</div>
+              {nextUp.length > 0 && (
+                <button className="startnow" onClick={() => startTimerOn(ck(nextUp[0].pk, nextUp[0].si, nextUp[0].ci))}>
+                  ▶ Start studying: <b>{nextUp[0].name}</b>
+                </button>
+              )}
               <div className="nu-list">
                 {nextUp.length === 0 ? (
                   <div className="nu-empty">🎉 Nothing flagged, every chapter is done and solid. Now live in the Mock Scores tab.</div>
                 ) : nextUp.map((it, i) => {
                   const paperNm = PAPERS[it.pk].name.split(',')[0].split(' ').slice(0, 2).join(' ')
+                  const k = ck(it.pk, it.si, it.ci); const st = g(k)
                   return (
                     <div className="nu-item" key={`${it.pk}-${it.si}-${it.ci}`} onClick={() => jumpTo(it.pk, it.si)}>
                       <div className="nu-rank">{i + 1}</div>
                       <div>
                         <div className="nu-name">{it.name}</div>
                         <div className="nu-why">{paperNm} · {it.reasons.join(' · ')}</div>
+                        <div className="nu-badges">
+                          {it.isFocus && <span className="nu-tag focus">Focus</span>}
+                          <span className={`nu-tag ${it.tier}`}>{it.tier === 'hi' ? 'High wt' : it.tier === 'med' ? 'Med wt' : 'Low wt'}</span>
+                          {it.conf === 1 && <span className="nu-tag red">Shaky</span>}
+                          {it.rev && <span className="nu-tag revise">Revise</span>}
+                        </div>
                       </div>
-                      <div className="nu-badges">
-                        {it.isFocus && <span className="nu-tag focus">Focus</span>}
-                        <span className={`nu-tag ${it.tier}`}>{it.tier === 'hi' ? 'High wt' : it.tier === 'med' ? 'Med wt' : 'Low wt'}</span>
-                        {it.conf === 1 && <span className="nu-tag red">Shaky</span>}
-                        {it.rev && <span className="nu-tag revise">Revise</span>}
+                      <div className="nu-actions" onClick={(e) => e.stopPropagation()}>
+                        <button className={`nu-tick${st.done ? ' on' : ''}`} title="Mark done" onClick={() => toggleDone(k)}>{st.done ? '✓' : ''}</button>
+                        <div className="nu-conf">
+                          {[1, 2, 3].map((v) => (
+                            <b key={v} data-v={v} className={st.conf === v ? 's' : ''}
+                              title={v === 1 ? 'Shaky' : v === 2 ? 'Getting there' : 'Solid'}
+                              onClick={() => setConf(k, v)}>{v}</b>
+                          ))}
+                        </div>
+                        <button className="nu-start" title="Start timer on this" onClick={() => startTimerOn(k)}>▶</button>
                       </div>
                     </div>
                   )
@@ -585,6 +627,38 @@ export default function App() {
                 <div className={`pace-state ${pace.cls}`}>{pace.label}</div>
               </div>
             </div>
+
+            {reviseList.length > 0 && (
+              <div className="revise">
+                <h3>↻ Revise today <span className="revise-n">{reviseList.length}</span></h3>
+                <div className="revise-lead">Chapters you completed a while back — a quick revisit locks them in.</div>
+                <div className="nu-list">
+                  {reviseList.map((it) => {
+                    const paperNm = PAPERS[it.pk].name.split(',')[0].split(' ').slice(0, 2).join(' ')
+                    const st = g(it.k)
+                    return (
+                      <div className="nu-item" key={it.k} onClick={() => jumpTo(it.pk, it.si)}>
+                        <div className="nu-rank">↻</div>
+                        <div>
+                          <div className="nu-name">{it.name}</div>
+                          <div className="nu-why">{paperNm} · revision {it.rev}</div>
+                        </div>
+                        <div className="nu-actions" onClick={(e) => e.stopPropagation()}>
+                          <button className="nu-revised" title="Mark revised — resets the clock" onClick={() => markRevised(it.k)}>Revised ✓</button>
+                          <div className="nu-conf">
+                            {[1, 2, 3].map((v) => (
+                              <b key={v} data-v={v} className={st.conf === v ? 's' : ''}
+                                title={v === 1 ? 'Shaky' : v === 2 ? 'Getting there' : 'Solid'}
+                                onClick={() => setConf(it.k, v)}>{v}</b>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
 
             <div className="overall">
               <h3>Overall Group 1 Progress</h3>
@@ -773,6 +847,39 @@ function InstallButton() {
 }
 
 /* ============================================================
+   CHAPTER SEARCH — quick-jump across all 166 chapters
+   ============================================================ */
+function Search({ onJump }) {
+  const [q, setQ] = useState('')
+  const results = useMemo(() => {
+    const query = q.trim().toLowerCase()
+    if (query.length < 2) return []
+    const out = []
+    Object.keys(PAPERS).forEach((pk) => PAPERS[pk].sections.forEach((s, si) => s.ch.forEach((name, ci) => {
+      if (name.toLowerCase().includes(query)) out.push({ pk, si, ci, name, paper: PAPERS[pk].name.split(',')[0] })
+    })))
+    return out.slice(0, 8)
+  }, [q])
+  return (
+    <div className="search">
+      <input className="search-input" value={q} onChange={(e) => setQ(e.target.value)}
+        placeholder="🔍 Jump to a chapter — e.g. Ind AS 116, SA 315, EPS…" spellCheck={false} />
+      {results.length > 0 && (
+        <div className="search-results">
+          {results.map((r, i) => (
+            <button className="search-res" key={i} onClick={() => { onJump(r.pk, r.si); setQ('') }}>
+              <span className="search-res-name">{r.name}</span>
+              <span className="search-res-paper">{r.paper}</span>
+            </button>
+          ))}
+        </div>
+      )}
+      {q.trim().length >= 2 && results.length === 0 && <div className="search-empty">No chapter matches “{q}”.</div>}
+    </div>
+  )
+}
+
+/* ============================================================
    DAILY REMINDER — local notification when app is open/backgrounded,
    best-effort background via periodic sync on installed Chrome PWAs.
    ============================================================ */
@@ -884,7 +991,7 @@ function computeStreaks(daily) {
   return { streak: cur, best: Math.max(best, cur) }
 }
 
-function DailyEngine({ daily, goalMins, nextUp, onAddMinutes, onSetGoal }) {
+function DailyEngine({ daily, goalMins, nextUp, onAddMinutes, onSetGoal, startReq }) {
   const today = dstr()
   const todayMin = (daily[today] && daily[today].min) || 0
   const { streak, best } = useMemo(() => computeStreaks(daily), [daily])
@@ -904,6 +1011,11 @@ function DailyEngine({ daily, goalMins, nextUp, onAddMinutes, onSetGoal }) {
   useEffect(() => {
     if (!chKey && nextUp && nextUp.length) setChKey(ck(nextUp[0].pk, nextUp[0].si, nextUp[0].ci))
   }, [nextUp]) // eslint-disable-line
+  // external "Start this now" request → select the chapter and start a fresh timer
+  useEffect(() => {
+    if (!startReq) return
+    setChKey(startReq.k); setAccum(0); setStartedAt(Date.now()); setRunning(true)
+  }, [startReq && startReq.n]) // eslint-disable-line
 
   const elapsed = accum + (running ? Math.floor((Date.now() - startedAt) / 1000) : 0)
   const start = () => { setStartedAt(Date.now()); setRunning(true) }
