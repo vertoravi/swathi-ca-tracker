@@ -88,7 +88,9 @@ export default function App() {
   const [store, setStore] = useState(emptyState)
   const [status, setStatus] = useState('offline') // 'synced' | 'saving' | 'offline'
   const [ready, setReady] = useState(false)        // boot (initial load) complete
+  const [syncErr, setSyncErr] = useState('')       // last sync error, for diagnostics
   const saveTimer = useRef(null)
+  const configured = Boolean(supabase)             // env vars present at build time?
 
   const ch = store.ch || {}
   const mocks = store.mocks || []
@@ -101,6 +103,18 @@ export default function App() {
     setCode(nc)
   }, [])
 
+  // Log out of the current code → back to the entry screen (progress stays saved under the code).
+  const switchCode = useCallback(() => {
+    if (!window.confirm('Switch to a different code?\n\nYour current progress stays saved under this code — re-enter it anytime to get it back.')) return
+    try { localStorage.removeItem(CODE_KEY) } catch (e) {}
+    try { window.history.replaceState({}, '', window.location.pathname) } catch (e) {} // drop ?code= so it doesn't re-hydrate
+    setReady(false)
+    setStore(emptyState())
+    setSyncErr('')
+    setStatus('offline')
+    setCode('')
+  }, [])
+
   // Boot load: seed from local cache instantly, then pull latest from Supabase.
   useEffect(() => {
     if (!code) return
@@ -108,7 +122,7 @@ export default function App() {
     setReady(false)
     setStore(loadLocal(code))
     ;(async () => {
-      if (!supabase) { setStatus('offline'); if (!cancelled) setReady(true); return }
+      if (!supabase) { setStatus('offline'); setSyncErr('not configured — Supabase env vars missing from this build'); if (!cancelled) setReady(true); return }
       try {
         const { data, error } = await supabase
           .from('progress').select('data').eq('share_code', code).maybeSingle()
@@ -119,9 +133,9 @@ export default function App() {
           setStore(remote)
           saveLocal(code, remote)
         }
-        setStatus('synced')
+        setStatus('synced'); setSyncErr('')
       } catch (e) {
-        if (!cancelled) setStatus('offline')
+        if (!cancelled) { setStatus('offline'); setSyncErr(e?.message || 'fetch failed') }
       } finally {
         if (!cancelled) setReady(true)
       }
@@ -133,7 +147,7 @@ export default function App() {
   useEffect(() => {
     if (!code || !ready) return
     saveLocal(code, store)
-    if (!supabase) { setStatus('offline'); return }
+    if (!supabase) { setStatus('offline'); setSyncErr('not configured — Supabase env vars missing from this build'); return }
     setStatus('saving')
     clearTimeout(saveTimer.current)
     saveTimer.current = setTimeout(async () => {
@@ -141,8 +155,9 @@ export default function App() {
         const { error } = await supabase
           .from('progress')
           .upsert({ share_code: code, data: store, updated_at: new Date().toISOString() })
-        setStatus(error ? 'offline' : 'synced')
-      } catch (e) { setStatus('offline') }
+        if (error) { setStatus('offline'); setSyncErr(error.message || 'save failed') }
+        else { setStatus('synced'); setSyncErr('') }
+      } catch (e) { setStatus('offline'); setSyncErr(e?.message || 'save failed') }
     }, SAVE_DEBOUNCE)
     return () => clearTimeout(saveTimer.current)
   }, [store, code, ready])
@@ -381,10 +396,20 @@ export default function App() {
   if (!code) return <Gate onChoose={chooseCode} />
 
   const syncLabel = status === 'saving' ? 'saving…' : status === 'synced' ? 'synced ✓' : 'offline'
+  const showDiag = () => {
+    const lines = [
+      `Sync code: ${code}`,
+      `Status: ${status}`,
+      `Supabase configured in this build: ${configured ? 'yes' : 'NO'}`,
+    ]
+    if (!configured) lines.push('', 'Fix: add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in Vercel, then Redeploy.')
+    if (syncErr) lines.push('', `Last error: ${syncErr}`)
+    window.alert(lines.join('\n'))
+  }
 
   return (
     <div className={isLight ? 'light' : ''}>
-      <div className={`syncbadge ${status}`} title={`Sync code: ${code}`}>{syncLabel}</div>
+      <div className={`syncbadge ${status}`} title="Click for sync detail" onClick={showDiag}>{syncLabel}</div>
       <div className="wrap">
         {/* HEADER */}
         <header>
@@ -532,7 +557,7 @@ export default function App() {
           <button onClick={importJSON}>Import backup</button>
           <button onClick={reset}>Reset tracker</button>
         </div>
-        <DeviceLink code={code} />
+        <DeviceLink code={code} onSwitch={switchCode} />
         <div className="savenote">Progress saves automatically & syncs across your devices · Export regularly as backup</div>
         <div className="foot">Built for Swathi · Weightages are official ICAI BoS section-wise data (issued 26 Oct 2023, valid May 2024 to Nov 2026). ICAI does not publish chapter-level weightage; sub-splits are study guidance, not official.</div>
       </div>
@@ -580,7 +605,7 @@ function Gate({ onChoose }) {
 /* ============================================================
    DEVICE LINK  (copy a ?code= link to open on another device)
    ============================================================ */
-function DeviceLink({ code }) {
+function DeviceLink({ code, onSwitch }) {
   const [copied, setCopied] = useState(false)
   const link = `${window.location.origin}${window.location.pathname}?code=${encodeURIComponent(code)}`
   const copy = async () => {
@@ -596,6 +621,7 @@ function DeviceLink({ code }) {
     <div className="devicelink">
       <span className="dl-code">Sync code: <b>{code}</b></span>
       <button className="dl-copy" onClick={copy}>{copied ? 'Copied ✓' : 'Copy device link'}</button>
+      <button className="dl-switch" onClick={onSwitch}>Switch / log out</button>
     </div>
   )
 }

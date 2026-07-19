@@ -338,3 +338,8 @@
   .sec-note textarea{width:100%;background:var(--panel);border:1px dashed var(--line);border-radius:9px;
     color:var(--ink);padding:9px 11px;font-size:13px;font-family:inherit;line-height:1.5;resize:vertical;min-height:44px}
   .sec-note textarea:focus{outline:none;border-color:var(--gold);border-style:solid}
+
+  .syncbadge{cursor:pointer}
+  .dl-switch{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 13px;
+    font-size:12px;font-weight:600;color:var(--dim);cursor:pointer;font-family:inherit;transition:.15s}
+  .dl-switch:hover{background:var(--panel-2);color:var(--ink)}
