@@ -124,13 +124,16 @@
   .ms .n{font-size:19px;font-weight:800;font-variant-numeric:tabular-nums}
   .ms .l{font-size:8.5px;text-transform:uppercase;letter-spacing:0.1em;color:var(--dim);margin-top:3px}
 
-  .tabs{display:flex;gap:7px;margin:22px 0 20px;flex-wrap:wrap;position:sticky;top:0;
-    background:var(--bg);padding:12px 0;z-index:20;border-bottom:1px solid var(--line)}
-  .tab{flex:1;min-width:96px;padding:11px 8px;border:1px solid var(--line);border-radius:10px;
-    background:var(--panel);cursor:pointer;text-align:center;transition:.2s}
-  .tab .code{font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--dim)}
-  .tab .nm{font-weight:700;font-size:13px;margin-top:3px}
-  .tab .pc{font-size:11px;color:var(--dim);margin-top:2px}
+  .tabs{display:flex;gap:7px;margin:16px 0 16px;position:sticky;top:0;z-index:30;
+    background:var(--bg);padding:10px 0;border-bottom:1px solid var(--line);
+    overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{flex:0 0 auto;padding:8px 14px;border:1px solid var(--line);border-radius:22px;
+    background:var(--panel);cursor:pointer;text-align:left;transition:.15s;white-space:nowrap;
+    display:flex;align-items:center;gap:8px}
+  .tab .code{display:none}
+  .tab .nm{font-weight:700;font-size:12.5px;margin:0}
+  .tab .pc{font-size:11px;color:var(--dim);margin:0}
   .tab.active{border-color:var(--gold);background:var(--panel-2)}
   .tab[data-p="fr"].active{border-color:var(--fr)}
   .tab[data-p="afm"].active{border-color:var(--afm)}
@@ -463,3 +466,52 @@
   .remind-on:disabled{opacity:.5;cursor:not-allowed}
   .remind-off{background:var(--panel);color:var(--dim);border:1px solid var(--line);border-radius:8px;padding:8px 14px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit}
   body.light .remind{display:none}
+
+  /* ============================================================
+     UX POLISH — smooth flow, hierarchy, mobile ergonomics
+     ============================================================ */
+  /* sections clear the sticky tab bar when jumped to */
+  .sec{scroll-margin-top:64px}
+  .paper-head{scroll-margin-top:64px}
+
+  /* smooth view transitions */
+  .view.active{animation:viewIn .22s ease}
+  @keyframes viewIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+  .sec-body{transition:opacity .18s ease}
+
+  /* tactile buttons + tappable rows */
+  button{transition:transform .08s ease, box-shadow .15s ease, background-color .15s ease, border-color .15s ease}
+  button:active{transform:translateY(1px)}
+  .cbx{transition:background-color .15s ease, transform .1s ease}
+  .cbx:active{transform:scale(.92)}
+  .ch{transition:background-color .15s ease}
+  .nu-item,.res-card,.tab{transition:transform .12s ease, box-shadow .15s ease, border-color .15s ease, background-color .15s ease}
+
+  /* collapse toggles (daily calendar, overall stats) */
+  .collapse-btn{display:inline-flex;align-items:center;gap:6px;background:none;border:none;cursor:pointer;
+    font-family:inherit;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--dim);padding:6px 0;margin-top:4px}
+  .collapse-btn:hover{color:var(--gold)}
+  .collapse-btn .car{transition:transform .18s ease;display:inline-block}
+  .collapse-btn.open .car{transform:rotate(90deg)}
+  .collapsible{animation:viewIn .2s ease}
+
+  /* tighter, calmer rhythm between the stacked home panels */
+  .nextup,.overall,.daily,.remind,.why,.encourage{margin-top:12px;margin-bottom:0}
+
+  /* mobile: compact header so the work is closer to the top */
+  @media (max-width:560px){
+    .wrap{padding:0 15px}
+    .banner{font-size:30px !important;line-height:1.05}
+    .banner .we{font-size:15px}
+    .hero-sub{font-size:12px}
+    .countdown{margin-top:12px}
+    .cd .n{font-size:20px}
+    .daily-top{gap:12px}
+    .heat-cal-grid{max-width:100%}
+    .tab .nm{font-size:12px}
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *,*::before,*::after{animation-duration:.001ms !important;transition-duration:.001ms !important;scroll-behavior:auto !important}
+  }

@@ -181,6 +181,7 @@ export default function App() {
   const [tab, setTab] = useState('fr')
   const [openSecs, setOpenSecs] = useState({}) // {paper: Set(si)}
   const [tick, setTick] = useState(0) // force countdown recompute if needed
+  const [showStats, setShowStats] = useState(false) // collapse extra stat tiles
 
   /* ---------- mutators ---------- */
   const updateChapter = (k, patch) => {
@@ -537,13 +538,18 @@ export default function App() {
               )
             })}
           </div>
-          <div className="mini-stats">
-            <div className="ms"><div className="n">{Math.round(stats.hrs * 10) / 10}</div><div className="l">Hours logged</div></div>
-            <div className="ms"><div className="n">{stats.shaky}</div><div className="l">Shaky (red)</div></div>
-            <div className="ms"><div className="n">{stats.solid}</div><div className="l">Solid (green)</div></div>
-            <div className="ms"><div className="n">{stats.hiLeft}</div><div className="l">High-wt left</div></div>
-            <div className="ms"><div className="n">{stats.revDue}</div><div className="l">Due to revise</div></div>
-          </div>
+          <button className={`collapse-btn${showStats ? ' open' : ''}`} onClick={() => setShowStats((v) => !v)}>
+            <span className="car">▸</span> {showStats ? 'Hide' : 'More'} stats
+          </button>
+          {showStats && (
+            <div className="mini-stats collapsible">
+              <div className="ms"><div className="n">{Math.round(stats.hrs * 10) / 10}</div><div className="l">Hours logged</div></div>
+              <div className="ms"><div className="n">{stats.shaky}</div><div className="l">Shaky (red)</div></div>
+              <div className="ms"><div className="n">{stats.solid}</div><div className="l">Solid (green)</div></div>
+              <div className="ms"><div className="n">{stats.hiLeft}</div><div className="l">High-wt left</div></div>
+              <div className="ms"><div className="n">{stats.revDue}</div><div className="l">Due to revise</div></div>
+            </div>
+          )}
         </div>
 
         {/* TABS */}
@@ -849,6 +855,7 @@ function DailyEngine({ daily, goalMins, nextUp, onAddMinutes, onSetGoal }) {
   const [startedAt, setStartedAt] = useState(0)
   const [, force] = useState(0)
   const [chKey, setChKey] = useState('')
+  const [showCal, setShowCal] = useState(false)
   useEffect(() => {
     if (!running) return
     const id = setInterval(() => force((n) => n + 1), 1000)
@@ -936,14 +943,19 @@ function DailyEngine({ daily, goalMins, nextUp, onAddMinutes, onSetGoal }) {
         </div>
       </div>
 
-      <div className="heat-cal">
-        <div className="heat-cal-grid">
-          {cells.map((c) => (
-            <div key={c.key} className={`hc l${c.lvl}`} title={`${c.key} · ${fmtMin(c.min)}${c.done ? ` · ${c.done} done` : ''}`} />
-          ))}
+      <button className={`collapse-btn${showCal ? ' open' : ''}`} onClick={() => setShowCal((v) => !v)}>
+        <span className="car">▸</span> Streak calendar
+      </button>
+      {showCal && (
+        <div className="heat-cal collapsible">
+          <div className="heat-cal-grid">
+            {cells.map((c) => (
+              <div key={c.key} className={`hc l${c.lvl}`} title={`${c.key} · ${fmtMin(c.min)}${c.done ? ` · ${c.done} done` : ''}`} />
+            ))}
+          </div>
+          <div className="heat-cal-legend"><span>Last 5 weeks</span><span>less</span><i className="l0" /><i className="l1" /><i className="l2" /><i className="l3" /><i className="l4" /><span>more</span></div>
         </div>
-        <div className="heat-cal-legend"><span>Last 5 weeks</span><span>less</span><i className="l0" /><i className="l1" /><i className="l2" /><i className="l3" /><i className="l4" /><span>more</span></div>
-      </div>
+      )}
     </div>
   )
 }
