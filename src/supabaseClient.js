@@ -10,8 +10,14 @@
    ============================================================ */
 import { createClient } from '@supabase/supabase-js'
 
-const url = import.meta.env.VITE_SUPABASE_URL
-const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+/* Project defaults (frontend-safe: publishable/anon key, RLS-scoped to `progress`).
+   Env vars override these if set in the build, so keys can be rotated without a code
+   change — but the app is always configured even if the env vars don't reach the build. */
+const DEFAULT_URL = 'https://qydnamqkylubrjinwpkz.supabase.co'
+const DEFAULT_ANON_KEY = 'sb_publishable_r5vkExV-_WY9rH4rM-qLpw_2WI7eI5y'
+
+const url = import.meta.env.VITE_SUPABASE_URL || DEFAULT_URL
+const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || DEFAULT_ANON_KEY
 
 export const supabase = url && anonKey ? createClient(url, anonKey) : null
 export const supabaseReady = Boolean(supabase)
