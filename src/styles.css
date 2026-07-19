@@ -699,3 +699,26 @@
     .nu-item{grid-template-columns:auto 1fr}
     .nu-actions{grid-column:1/-1;justify-content:flex-end;padding-left:34px;margin-top:2px}
   }
+
+  /* ============================================================
+     REWARD KITTY
+     ============================================================ */
+  .kitty{background:linear-gradient(135deg,rgba(46,145,96,.14),rgba(184,134,11,.10));
+    border:1px solid var(--line);border-radius:16px;padding:16px 18px;margin:12px 0 0;
+    box-shadow:0 1px 2px rgba(60,50,20,.04)}
+  .kitty-top{display:flex;align-items:center;gap:14px}
+  .kitty-ico{font-size:30px;line-height:1}
+  .kitty-main{flex:1}
+  .kitty-label{font-size:10px;text-transform:uppercase;letter-spacing:.16em;color:var(--go);font-weight:800}
+  .kitty-amt{font-size:30px;font-weight:900;color:var(--ink);line-height:1.05;letter-spacing:-.01em;
+    font-variant-numeric:tabular-nums;margin:2px 0}
+  .kitty-sub{font-size:11.5px;color:var(--dim)}
+  .kitty-sub b{color:var(--go)}
+  .kitty-rule{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:12px;
+    font-size:12.5px;color:var(--dim);border-top:1px solid var(--line);padding-top:12px}
+  .kitty-amtbox{display:inline-flex;align-items:center;gap:2px;font-weight:700;color:var(--ink)}
+  .kitty-amtbox input{width:64px;background:var(--panel);border:1px solid var(--line);border-radius:7px;
+    padding:5px 8px;font-size:13px;font-family:inherit;color:var(--ink);font-weight:700}
+  .kitty-amtbox input:focus{outline:none;border-color:var(--gold)}
+  .kitty-rule select{background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:5px 9px;
+    font-size:12.5px;font-family:inherit;color:var(--ink);font-weight:600;cursor:pointer}

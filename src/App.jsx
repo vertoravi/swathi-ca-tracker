@@ -32,6 +32,9 @@ function normalize(d) {
     reminderOn: (d && d.reminderOn) || false,
     reminderTime: (d && d.reminderTime) || '20:00',
     focus: (d && typeof d.focus === 'string') ? d.focus : 'aud', // current priority paper ('' = none)
+    kitty: (d && d.kitty && typeof d.kitty === 'object')
+      ? { amt: Number(d.kitty.amt) || 500, unit: d.kitty.unit || 'chapter' }
+      : { amt: 500, unit: 'chapter' }, // reward jar: ₹amt per unit done
     why: (d && d.why) || '',
     mode: (d && d.mode) || 'full',
   }
@@ -223,6 +226,8 @@ export default function App() {
   const updateReminder = (patch) => setStore((s) => ({ ...s, ...patch }))
   const focus = store.focus || ''
   const setFocus = (p) => setStore((s) => ({ ...s, focus: s.focus === p ? '' : p }))
+  const kitty = store.kitty || { amt: 500, unit: 'chapter' }
+  const setKitty = (patch) => setStore((s) => ({ ...s, kitty: { ...(s.kitty || { amt: 500, unit: 'chapter' }), ...patch } }))
   // Mark a due chapter as revised now (keeps it done, resets the spaced-revision clock)
   const markRevised = (k) => updateChapter(k, { done: true, doneAt: Date.now() })
   // Start the study timer on a chapter from anywhere, and bring the timer into view
@@ -306,6 +311,18 @@ export default function App() {
     items.sort((a, b) => (a.rev === 'overdue' ? 0 : 1) - (b.rev === 'overdue' ? 0 : 1))
     return items.slice(0, 8)
   }, [ch, g])
+
+  /* ---------- reward-kitty counts ---------- */
+  const kittyCounts = useMemo(() => {
+    let sectionsDone = 0
+    Object.keys(PAPERS).forEach((pk) =>
+      PAPERS[pk].sections.forEach((s, si) => {
+        if (s.ch.length && s.ch.every((_, ci) => g(ck(pk, si, ci)).done)) sectionsDone++
+      })
+    )
+    const activeDays = Object.keys(store.daily || {}).filter((k) => isActiveDay(store.daily[k])).length
+    return { chapter: stats.done, section: sectionsDone, day: activeDays }
+  }, [ch, g, store.daily, stats.done])
 
   /* ---------- pace ---------- */
   const pace = useMemo(() => {
@@ -567,6 +584,8 @@ export default function App() {
                   : 'Pick a paper to prioritise it everywhere.'}
               </span>
             </div>
+
+            <Kitty amt={kitty.amt} unit={kitty.unit} counts={kittyCounts} onChange={setKitty} />
 
             <WhyAnchor why={store.why} onSave={setWhy} />
 
@@ -875,6 +894,40 @@ function Search({ onJump }) {
         </div>
       )}
       {q.trim().length >= 2 && results.length === 0 && <div className="search-empty">No chapter matches “{q}”.</div>}
+    </div>
+  )
+}
+
+/* ============================================================
+   REWARD KITTY — ₹ incentive that grows with progress
+   ============================================================ */
+const inr = (n) => '₹' + Math.round(n).toLocaleString('en-IN')
+function Kitty({ amt, unit, counts, onChange }) {
+  const count = counts[unit] || 0
+  const total = count * (amt || 0)
+  const unitWord = unit === 'chapter' ? 'chapter' : unit === 'section' ? 'section' : 'study day'
+  const next = (count + 1) * (amt || 0)
+  return (
+    <div className="kitty">
+      <div className="kitty-top">
+        <span className="kitty-ico">💰</span>
+        <div className="kitty-main">
+          <div className="kitty-label">Reward kitty</div>
+          <div className="kitty-amt">{inr(total)}</div>
+          <div className="kitty-sub">{count} {unitWord}{count === 1 ? '' : 's'} × {inr(amt)} · next one takes it to <b>{inr(next)}</b></div>
+        </div>
+      </div>
+      <div className="kitty-rule">
+        <span>Earn</span>
+        <span className="kitty-amtbox">₹<input type="number" min="0" step="50" value={amt || ''} placeholder="500"
+          onChange={(e) => onChange({ amt: Math.max(0, parseInt(e.target.value) || 0) })} /></span>
+        <span>per</span>
+        <select value={unit} onChange={(e) => onChange({ unit: e.target.value })}>
+          <option value="chapter">chapter done</option>
+          <option value="section">section done</option>
+          <option value="day">study day</option>
+        </select>
+      </div>
     </div>
   )
 }
