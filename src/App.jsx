@@ -451,9 +451,46 @@ export default function App() {
     window.alert(lines.join('\n'))
   }
 
+  const navItems = [
+    { id: 'home', label: 'Dashboard' },
+    { id: 'fr', label: 'Financial Reporting', pc: stats.per.fr.pt ? Math.round((stats.per.fr.pd / stats.per.fr.pt) * 100) : 0 },
+    { id: 'afm', label: 'Adv. Fin. Mgmt', pc: stats.per.afm.pt ? Math.round((stats.per.afm.pd / stats.per.afm.pt) * 100) : 0 },
+    { id: 'aud', label: 'Adv. Auditing', pc: stats.per.aud.pt ? Math.round((stats.per.aud.pd / stats.per.aud.pt) * 100) : 0 },
+    { id: 'mock', label: 'Mock Scores' },
+    { id: 'papers', label: 'Past Papers' },
+    { id: 'info', label: 'Information' },
+  ].filter((n) => !isLight || ['home', 'fr', 'afm', 'aud'].includes(n.id))
+  const goTo = (id) => { setTab(id); window.scrollTo({ top: 0, behavior: 'smooth' }) }
+  const focusLabel = focus === 'fr' ? 'Financial Reporting' : focus === 'afm' ? 'Adv. Fin. Mgmt' : focus === 'aud' ? 'Adv. Auditing' : ''
+
   return (
     <div className={isLight ? 'light' : ''}>
       <div className={`syncbadge ${status}`} title="Click for sync detail" onClick={showDiag}>{syncLabel}</div>
+
+      {/* DESKTOP SIDEBAR (hidden < 900px; top nav takes over) */}
+      <aside className="sidebar">
+        <div className="sb-brand">
+          <div className="sb-brand-name">Swathi</div>
+          <div className="sb-brand-sub">CA Final · Group 1 · Nov 2026</div>
+          <div className="sb-count"><b>{d}</b> days to FR</div>
+        </div>
+        <nav className="sb-nav">
+          {navItems.map((n) => (
+            <button key={n.id} data-p={n.id}
+              className={`sb-item${tab === n.id ? ' active' : ''}${focus === n.id ? ' focus' : ''}`}
+              onClick={() => goTo(n.id)}>
+              {focus === n.id && <span className="sb-focus" title="Current focus">🎯</span>}
+              <span className="sb-label">{n.label}</span>
+              {n.pc != null && <span className="sb-pc">{n.pc}%</span>}
+            </button>
+          ))}
+        </nav>
+        <div className="sb-foot">
+          {focusLabel && <div className="sb-focus-note">🎯 Focus: <b>{focusLabel}</b></div>}
+          <div className={`sb-sync ${status}`} onClick={showDiag} title="Click for sync detail">{syncLabel}</div>
+        </div>
+      </aside>
+
       <div className="wrap">
         {/* HEADER */}
         <header>
@@ -475,19 +512,11 @@ export default function App() {
           </div>
         </header>
 
-        {/* PRIMARY NAV (sticky, side-scroll) */}
+        {/* PRIMARY NAV — sticky side-scroll on mobile (< 900px); sidebar takes over on desktop */}
         <nav className="navbar">
-          {[
-            { id: 'home', label: 'Dashboard' },
-            { id: 'fr', label: 'Financial Reporting', pc: stats.per.fr.pt ? Math.round((stats.per.fr.pd / stats.per.fr.pt) * 100) : 0 },
-            { id: 'afm', label: 'Adv. Fin. Mgmt', pc: stats.per.afm.pt ? Math.round((stats.per.afm.pd / stats.per.afm.pt) * 100) : 0 },
-            { id: 'aud', label: 'Adv. Auditing', pc: stats.per.aud.pt ? Math.round((stats.per.aud.pd / stats.per.aud.pt) * 100) : 0 },
-            { id: 'mock', label: 'Mock Scores' },
-            { id: 'papers', label: 'Past Papers' },
-            { id: 'info', label: 'Information' },
-          ].filter((n) => !isLight || ['home', 'fr', 'afm', 'aud'].includes(n.id)).map((n) => (
+          {navItems.map((n) => (
             <button key={n.id} data-p={n.id} className={`navitem${tab === n.id ? ' active' : ''}${focus === n.id ? ' focus' : ''}`}
-              onClick={() => { setTab(n.id); window.scrollTo({ top: 0, behavior: 'smooth' }) }}>
+              onClick={() => goTo(n.id)}>
               {focus === n.id && <span className="navitem-focus" title="Current focus">🎯</span>}
               <span className="navitem-l">{n.label}</span>
               {n.pc != null && <span className="navitem-pc">{n.pc}%</span>}
